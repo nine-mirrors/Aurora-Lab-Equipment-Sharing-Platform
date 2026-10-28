@@ -1,0 +1,19 @@
+{
+  "name": "极光 · 实验室设备共享平台",
+  "short_name": "极光实验室",
+  "description": "高校实验室设备共享与智能调度平台：设备预约、借用审批、归还管理与数据看板",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#06120e",
+  "theme_color": "#0e7c66",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-input {
+  width: 240px;
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.batch-bar b {
+  color: var(--primary);
+}
+
+.device-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.device-initial {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.device-cell div {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.4;
+}
+
+.device-cell strong {
+  font-size: 13px;
+  color: var(--text-1);
+}
+
+.device-cell span {
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.mini-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #fff;
+  background: var(--gradient-aurora);
+}
+
+.time-text {
+  font-size: 12px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.time-cell {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.4;
+}
+
+.ext-request {
+  font-size: 10px;
+  color: var(--violet);
+}
+
+:deep(.el-table__row) {
+  cursor: pointer;
+}
+
+/* 抽屉 */
+@media (max-width: 1100px) {
+  .apply-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .search-input {
+    width: 100%;
+  }
+
+  .toolbar-right {
+    width: 100%;
+  }
+
+  .toolbar-right .el-input {
+    flex: 1;
+  }
+}

@@ -1,0 +1,161 @@
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.summary-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 16px 18px;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  --tone: var(--primary);
+  --tone-soft: var(--primary-soft);
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--tone) 28%, var(--border));
+  box-shadow: var(--shadow-md);
+}
+
+.summary-card.active {
+  border-color: color-mix(in srgb, var(--tone) 36%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 10%, transparent);
+}
+
+.summary-label {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.summary-card strong {
+  font-size: 25px;
+  letter-spacing: -0.03em;
+  color: var(--text-1);
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-hint {
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+
+.summary-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--tone), transparent);
+  opacity: 0.7;
+}
+
+.tone-primary { --tone: var(--primary); --tone-soft: var(--primary-soft); }
+.tone-amber { --tone: var(--amber); --tone-soft: var(--amber-soft); }
+.tone-green { --tone: var(--green); --tone-soft: var(--green-soft); }
+.tone-cyan { --tone: var(--cyan); --tone-soft: var(--cyan-soft); }
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.search-input {
+  width: 240px;
+}
+
+.record-table :deep(.el-table__row) {
+  cursor: pointer;
+}
+
+.device-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.device-initial {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.device-cell div {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+}
+
+.device-cell strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.device-cell span {
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+
+.time-text {
+  font-size: 12px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 抽屉 ---------- */
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.row-actions :deep(.el-button) {
+  margin-left: 0;
+}
+
+@media (max-width: 1100px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .search-input {
+    width: 100%;
+  }
+
+  .summary-card {
+    padding: 13px 15px;
+  }
+
+  .summary-card strong {
+    font-size: 22px;
+  }
+
+}

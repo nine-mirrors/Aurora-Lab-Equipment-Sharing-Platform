@@ -1,0 +1,279 @@
+/* ============================================================
+   VERDANT LAB · 设计系统 v3
+   森野绿 + 青柠 + 陶土暖色 · 实验室自然科技感
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* ---------- 字体 ---------- */
+  --font-sans: "Inter", "SF Pro Text", "PingFang SC", "HarmonyOS Sans SC",
+    "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono",
+    monospace;
+
+  /* ---------- 画布与表面 ---------- */
+  --bg-canvas: #f3f6ef;
+  --bg-elevated: #ffffff;
+  --bg-subtle: #f7faf4;
+  --bg-muted: #e9f0e3;
+  --bg-inverse: #06120e;
+
+  --surface: rgba(255, 255, 255, 0.82);
+  --surface-solid: #ffffff;
+  --surface-hover: #f2f8ee;
+  --surface-sunken: #f5f9f1;
+
+  --border: #dfe8d8;
+  --border-strong: #cddbc3;
+  --border-soft: #edf3e7;
+
+  /* ---------- 文本 ---------- */
+  --text-1: #0d2119;
+  --text-2: #40584b;
+  --text-3: #7e9487;
+  --text-invert: #ffffff;
+
+  /* ---------- 品牌色 ---------- */
+  --primary: #0e7c66;
+  --primary-strong: #0a6653;
+  --primary-soft: #e2f4ee;
+  --primary-glow: rgba(14, 124, 102, 0.3);
+
+  --lime: #9fbf3a;
+  --lime-soft: #f2f8dd;
+  --lime-deep: #7e9b25;
+  --copper: #b86a45;
+  --copper-soft: #f9eee8;
+
+  --violet: #b0644a;
+  --violet-soft: #f8ece6;
+  --cyan: #2f9e8f;
+  --cyan-soft: #e3f5f1;
+  --green: #2e9e57;
+  --green-soft: #e8f6ec;
+  --amber: #c98a26;
+  --amber-soft: #fbf2df;
+  --red: #c94f45;
+  --red-soft: #fbeceb;
+
+  --gradient-primary: linear-gradient(135deg, #16967b 0%, #0e7c66 48%, #0a6653 100%);
+  --gradient-aurora: linear-gradient(135deg, #0e7c66 0%, #4f9e63 45%, #a8c63f 100%);
+  --gradient-lime: linear-gradient(135deg, #7e9b25 0%, #a8c63f 55%, #d5e88a 100%);
+  --gradient-ai: linear-gradient(145deg, #0e7c66 0%, #6f9e4f 52%, #c98a4a 100%);
+  --gradient-text: linear-gradient(115deg, #0a6653 0%, #3f9e6c 46%, #8fae2e 100%);
+  --gradient-ink: linear-gradient(160deg, #06120e 0%, #0b211a 48%, #07130f 100%);
+
+  /* ---------- 阴影 ---------- */
+  --shadow-xs: 0 1px 2px rgba(13, 33, 25, 0.05);
+  --shadow-sm: 0 1px 2px rgba(13, 33, 25, 0.04), 0 8px 20px -8px rgba(13, 33, 25, 0.14);
+  --shadow-md: 0 2px 4px rgba(13, 33, 25, 0.04), 0 20px 42px -20px rgba(13, 33, 25, 0.26);
+  --shadow-lg: 0 4px 12px rgba(13, 33, 25, 0.06), 0 36px 72px -28px rgba(13, 33, 25, 0.32);
+  --shadow-glow: 0 12px 32px -10px rgba(14, 124, 102, 0.42);
+
+  /* ---------- 圆角与动效 ---------- */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 0.16s;
+  --dur: 0.28s;
+  --dur-slow: 0.55s;
+
+  --header-h: 68px;
+  --sidebar-w: 252px;
+  --sidebar-collapsed: 84px;
+
+  /* ---------- 兼容旧变量 ---------- */
+  --lab-bg: var(--bg-canvas);
+  --lab-bg-soft: var(--bg-muted);
+  --lab-card: var(--surface-solid);
+  --lab-border: var(--border);
+  --lab-border-strong: var(--border-strong);
+  --lab-text: var(--text-1);
+  --lab-text-2: var(--text-2);
+  --lab-text-3: var(--text-3);
+  --lab-primary: var(--primary);
+  --lab-primary-dark: var(--primary-strong);
+  --lab-primary-soft: var(--primary-soft);
+  --lab-cyan: var(--cyan);
+  --lab-cyan-soft: var(--cyan-soft);
+  --lab-amber: var(--amber);
+  --lab-amber-soft: var(--amber-soft);
+  --lab-green: var(--green);
+  --lab-green-soft: var(--green-soft);
+  --lab-red: var(--red);
+  --lab-red-soft: var(--red-soft);
+  --lab-violet: var(--violet);
+  --lab-violet-soft: var(--violet-soft);
+  --lab-radius: var(--radius-lg);
+  --lab-radius-md: var(--radius-md);
+  --lab-radius-sm: var(--radius-sm);
+  --lab-shadow: var(--shadow-sm);
+  --lab-shadow-hover: var(--shadow-md);
+  --lab-font: var(--font-sans);
+
+  /* ---------- Element Plus 亮色主题 ---------- */
+  --el-color-primary: #0e7c66;
+  --el-color-primary-light-3: #4fa38f;
+  --el-color-primary-light-5: #87c4b5;
+  --el-color-primary-light-7: #bfe0d6;
+  --el-color-primary-light-8: #d7ece5;
+  --el-color-primary-light-9: #ebf6f2;
+  --el-color-primary-dark-2: #0b6352;
+
+  --el-color-success: #2e9e57;
+  --el-color-success-light-3: #63b981;
+  --el-color-success-light-5: #96d0aa;
+  --el-color-success-light-7: #c4e6d0;
+  --el-color-success-light-8: #d9f0e1;
+  --el-color-success-light-9: #e8f6ec;
+  --el-color-success-dark-2: #257e46;
+
+  --el-color-warning: #c98a26;
+  --el-color-warning-light-3: #d9a95a;
+  --el-color-warning-light-5: #e4c28e;
+  --el-color-warning-light-7: #f0dcc1;
+  --el-color-warning-light-8: #f5e8d5;
+  --el-color-warning-light-9: #fbf2df;
+  --el-color-warning-dark-2: #a16e1e;
+
+  --el-color-danger: #c94f45;
+  --el-color-danger-light-3: #d87d75;
+  --el-color-danger-light-5: #e4a6a1;
+  --el-color-danger-light-7: #f0cfcc;
+  --el-color-danger-light-8: #f5dfdd;
+  --el-color-danger-light-9: #fbeceb;
+  --el-color-danger-dark-2: #a13f37;
+
+  --el-color-info: #7e9487;
+  --el-color-info-light-9: #f1f6ef;
+
+  --el-text-color-primary: #0d2119;
+  --el-text-color-regular: #40584b;
+  --el-text-color-secondary: #637a6d;
+  --el-text-color-placeholder: #96aa9d;
+
+  --el-border-color: #dfe8d8;
+  --el-border-color-light: #e7efe1;
+  --el-border-color-lighter: #eef4e9;
+  --el-border-color-extra-light: #f4f8f1;
+  --el-fill-color-blank: #ffffff;
+  --el-fill-color-light: #f7faf4;
+  --el-fill-color-lighter: #fbfdf9;
+  --el-bg-color: #ffffff;
+  --el-bg-color-page: #f3f6ef;
+  --el-bg-color-overlay: #ffffff;
+
+  --el-border-radius-base: 10px;
+  --el-border-radius-small: 8px;
+  --el-border-radius-round: 999px;
+  --el-font-family: var(--font-sans);
+  --el-box-shadow-light: 0 12px 32px -12px rgba(13, 33, 25, 0.18);
+  --el-box-shadow: 0 20px 42px -20px rgba(13, 33, 25, 0.26);
+  --el-mask-color: rgba(6, 18, 14, 0.44);
+}
+
+/* ============================================================
+   深夜温室（暗色）主题
+   ============================================================ */
+:root.dark {
+  color-scheme: dark;
+
+  --bg-canvas: #06110d;
+  --bg-elevated: #0d1a14;
+  --bg-subtle: #101f18;
+  --bg-muted: #16271f;
+  --bg-inverse: #f2f8f2;
+
+  --surface: rgba(13, 29, 22, 0.78);
+  --surface-solid: #0d1a14;
+  --surface-hover: #14251c;
+  --surface-sunken: #0a1510;
+
+  --border: #1d3027;
+  --border-strong: #2a4438;
+  --border-soft: #15241c;
+
+  --text-1: #eaf6ee;
+  --text-2: #a6bdaf;
+  --text-3: #6e8678;
+  --text-invert: #0d2119;
+
+  --primary: #3ac8a5;
+  --primary-strong: #6bdfc2;
+  --primary-soft: rgba(58, 200, 165, 0.14);
+  --primary-glow: rgba(58, 200, 165, 0.36);
+
+  --lime: #c2dd63;
+  --lime-soft: rgba(194, 221, 99, 0.13);
+  --lime-deep: #a8c63f;
+  --copper: #e29a72;
+  --copper-soft: rgba(226, 154, 114, 0.14);
+
+  --violet: #e9a37f;
+  --violet-soft: rgba(233, 163, 127, 0.14);
+  --cyan: #46c2ae;
+  --cyan-soft: rgba(70, 194, 174, 0.13);
+  --green: #4fbf7c;
+  --green-soft: rgba(79, 191, 124, 0.13);
+  --amber: #e3b25b;
+  --amber-soft: rgba(227, 178, 91, 0.13);
+  --red: #ef7b72;
+  --red-soft: rgba(239, 123, 114, 0.13);
+
+  --gradient-primary: linear-gradient(135deg, #46d3b0 0%, #2fb394 48%, #1f8f75 100%);
+  --gradient-aurora: linear-gradient(135deg, #3ac8a5 0%, #7fbf6a 45%, #c2dd63 100%);
+  --gradient-lime: linear-gradient(135deg, #b7cf57 0%, #d5e88a 55%, #eef7b8 100%);
+  --gradient-ai: linear-gradient(145deg, #3ac8a5 0%, #9bc75d 52%, #e29a72 100%);
+  --gradient-text: linear-gradient(115deg, #8ef0d2 0%, #c2dd63 52%, #f0bd97 100%);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 24px -12px rgba(0, 0, 0, 0.7);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.4), 0 24px 48px -24px rgba(0, 0, 0, 0.85);
+  --shadow-lg: 0 6px 16px rgba(0, 0, 0, 0.45), 0 44px 80px -32px rgba(0, 0, 0, 0.9);
+  --shadow-glow: 0 12px 34px -12px rgba(58, 200, 165, 0.5);
+
+  --el-color-primary: #3ac8a5;
+  --el-color-primary-light-3: #6bdfc2;
+  --el-color-primary-light-5: #93ead2;
+  --el-color-primary-light-7: #24483c;
+  --el-color-primary-light-8: #1c3a30;
+  --el-color-primary-light-9: #16271f;
+  --el-color-primary-dark-2: #6bdfc2;
+
+  --el-color-success: #4fbf7c;
+  --el-color-success-light-9: #122a1e;
+  --el-color-warning: #e3b25b;
+  --el-color-warning-light-9: #2a2313;
+  --el-color-danger: #ef7b72;
+  --el-color-danger-light-9: #2c1715;
+  --el-color-info: #8ba296;
+  --el-color-info-light-9: #16271f;
+
+  --el-text-color-primary: #eaf6ee;
+  --el-text-color-regular: #a6bdaf;
+  --el-text-color-secondary: #8aa093;
+  --el-text-color-placeholder: #64796d;
+  --el-text-color-disabled: #4a5e54;
+
+  --el-border-color: #1d3027;
+  --el-border-color-light: #1a2b23;
+  --el-border-color-lighter: #16251d;
+  --el-border-color-extra-light: #132119;
+  --el-fill-color-blank: #0d1a14;
+  --el-fill-color-light: #101f18;
+  --el-fill-color-lighter: #0a1510;
+  --el-fill-color-dark: #16271f;
+  --el-bg-color: #0d1a14;
+  --el-bg-color-page: #06110d;
+  --el-bg-color-overlay: #101f18;
+  --el-box-shadow-light: 0 16px 40px -16px rgba(0, 0, 0, 0.9);
+  --el-box-shadow: 0 26px 56px -24px rgba(0, 0, 0, 0.95);
+  --el-mask-color: rgba(3, 9, 6, 0.72);
+}
