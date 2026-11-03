@@ -35,7 +35,7 @@ const action = computed(() =>
 )
 
 const stockStyle = computed(() => ({
-  width: `${percent.value}%`,
+  transform: `scaleX(${percent.value / 100})`,
   background:
     percent.value > 40
       ? 'linear-gradient(90deg, #0e7c66, #9fbf3a)'
@@ -134,7 +134,7 @@ const stockStyle = computed(() => ({
   flex-direction: column;
   padding: 18px 20px 14px;
   cursor: pointer;
-  animation: lab-fade-up 0.55s var(--ease-out) both;
+  animation: lab-fade-up var(--dur-enter) var(--ease-out) both;
 }
 
 .device-card.is-list {
@@ -202,13 +202,18 @@ const stockStyle = computed(() => ({
   background: transparent;
   color: var(--text-3);
   cursor: pointer;
-  transition: all var(--dur-fast) ease;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .fav-btn:hover {
   background: var(--amber-soft);
   color: var(--amber);
-  transform: scale(1.1);
+  transform: scale(1.06);
+}
+
+.fav-btn:active {
+  transform: scale(0.94);
 }
 
 .fav-btn.on {
@@ -305,9 +310,11 @@ const stockStyle = computed(() => ({
 
 .stock-bar i {
   display: block;
+  width: 100%;
   height: 100%;
   border-radius: inherit;
-  transition: width 0.8s var(--ease-out);
+  transform-origin: left center;
+  transition: transform var(--dur-slow) var(--ease-out);
 }
 
 .stock-text {

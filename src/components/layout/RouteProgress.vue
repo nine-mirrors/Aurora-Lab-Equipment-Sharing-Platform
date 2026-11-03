@@ -72,11 +72,11 @@ onBeforeUnmount(() => {
   border-radius: 0 999px 999px 0;
   background: linear-gradient(90deg, #16967b, #c2dd63 55%, #e29a72);
   box-shadow: 0 0 14px rgba(14, 124, 102, 0.55);
-  transition: width 0.35s var(--ease-out);
+  transition: width var(--dur) var(--ease-out);
 }
 
 .progress-fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity var(--dur-fast) ease;
 }
 
 .progress-fade-leave-to {

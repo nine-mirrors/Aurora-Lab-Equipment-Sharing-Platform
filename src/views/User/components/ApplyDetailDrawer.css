@@ -246,7 +246,8 @@
   background: color-mix(in srgb, var(--primary) 5%, transparent);
   cursor: pointer;
   text-align: left;
-  transition: all var(--dur-fast) ease;
+  transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease, transform var(--dur-fast) ease;
 }
 
 .code-card.return {
@@ -254,9 +255,15 @@
   background: color-mix(in srgb, var(--amber) 6%, transparent);
 }
 
-.code-card:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+@media (hover: hover) and (pointer: fine) {
+  .code-card:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+}
+
+.code-card:active {
+  transform: scale(0.98);
 }
 
 .code-card span {

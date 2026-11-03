@@ -258,7 +258,8 @@ onBeforeUnmount(() => clearInterval(timer))
   font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--dur-fast) ease;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease, transform var(--dur-press) ease;
   white-space: nowrap;
 }
 
@@ -266,6 +267,10 @@ onBeforeUnmount(() => clearInterval(timer))
   color: var(--primary);
   border-color: color-mix(in srgb, var(--primary) 34%, var(--border));
   background: var(--primary-soft);
+}
+
+.code-btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .code-btn:disabled {

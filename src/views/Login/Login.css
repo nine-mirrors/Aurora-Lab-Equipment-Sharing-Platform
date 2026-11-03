@@ -543,14 +543,21 @@
   background: var(--surface);
   cursor: pointer;
   text-align: left;
-  transition: all var(--dur) var(--ease-out);
+  transition: border-color var(--dur) var(--ease-out), background-color var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
 }
 
-.demo-item:hover {
-  border-color: color-mix(in srgb, var(--primary) 34%, var(--border));
-  background: var(--primary-soft);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 26px -18px var(--primary-glow);
+@media (hover: hover) and (pointer: fine) {
+  .demo-item:hover {
+    border-color: color-mix(in srgb, var(--primary) 34%, var(--border));
+    background: var(--primary-soft);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 26px -18px var(--primary-glow);
+  }
+}
+
+.demo-item:active {
+  transform: scale(0.98);
 }
 
 .demo-icon {
@@ -600,7 +607,8 @@
   color: var(--text-3);
   opacity: 0;
   transform: translateX(-4px);
-  transition: all var(--dur) var(--ease-out);
+  transition: opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-out),
+    color var(--dur) var(--ease-out);
 }
 
 .demo-item:hover .demo-arrow {
@@ -769,11 +777,11 @@
 }
 
 .success-enter-active {
-  transition: opacity 0.3s ease;
+  transition: opacity var(--dur) ease;
 }
 
 .success-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity var(--dur) ease;
 }
 
 .success-enter-from,

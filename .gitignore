@@ -60,6 +60,9 @@ test-results/
 playwright-report/
 blob-report/
 
+# 动效审计截图（本地对比用，不提交）
+.screenshots/
+
 # 生成的提交材料（保留 md 文案，忽略大体积成品）
 submission/参赛打包文件/
 submission/*.zip

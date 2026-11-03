@@ -363,12 +363,17 @@ watch(
   background: var(--bg-elevated);
   color: var(--text-3);
   cursor: pointer;
-  transition: all var(--dur-fast) ease;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease, transform var(--dur-press) ease;
 }
 
 .icon-btn:hover {
   color: var(--text-1);
   background: var(--bg-subtle);
+}
+
+.icon-btn:active {
+  transform: scale(0.94);
 }
 
 .notice-tabs {
@@ -390,7 +395,12 @@ watch(
   color: var(--text-3);
   font-size: 12.5px;
   cursor: pointer;
-  transition: all var(--dur-fast) ease;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    transform var(--dur-press) ease;
+}
+
+.notice-tab:active {
+  transform: scale(0.96);
 }
 
 .notice-tab span {
@@ -566,7 +576,11 @@ watch(
 
 .list-enter-active,
 .list-leave-active {
-  transition: all 0.28s var(--ease-out);
+  transition: opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
+}
+
+.list-move {
+  transition: transform var(--dur) var(--ease-out);
 }
 
 .list-enter-from,
@@ -577,7 +591,7 @@ watch(
 
 .notice-enter-active,
 .notice-leave-active {
-  transition: opacity 0.26s ease;
+  transition: opacity var(--dur-quick) ease;
 }
 
 .notice-enter-from,

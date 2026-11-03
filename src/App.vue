@@ -121,12 +121,11 @@ onBeforeUnmount(() => {
 <style>
 /* 启动与路由过渡类由 Vue 注入到全局 DOM，必须全局生效 */
 .boot-leave-active {
-  transition: opacity 0.5s var(--ease-out), transform 0.6s var(--ease-out), filter 0.5s ease;
+  transition: opacity var(--dur-enter) var(--ease-out), transform var(--dur-slow) var(--ease-out);
 }
 
 .boot-leave-to {
   opacity: 0;
-  transform: scale(1.04);
-  filter: blur(10px);
+  transform: scale(1.02);
 }
 </style>

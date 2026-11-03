@@ -241,12 +241,17 @@
   font-size: 11px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease, transform var(--dur-press) ease;
 }
 
 .ai-review-btn:hover:not(:disabled) {
   background: var(--bg-elevated);
   border-color: var(--primary);
+}
+
+.ai-review-btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .ai-review-btn:disabled {

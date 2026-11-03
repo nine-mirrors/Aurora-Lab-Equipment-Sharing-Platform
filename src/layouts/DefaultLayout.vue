@@ -36,11 +36,13 @@ const blacklistReason = computed(
         <router-link to="/student/profile" class="banner-link">查看详情</router-link>
       </div>
 
-      <RouterView v-slot="{ Component }">
-        <Transition name="route" mode="out-in">
-          <component :is="Component" :key="route.path" />
-        </Transition>
-      </RouterView>
+      <div class="route-stage">
+        <RouterView v-slot="{ Component }">
+          <Transition name="route-view">
+            <component :is="Component" :key="route.path" />
+          </Transition>
+        </RouterView>
+      </div>
     </main>
 
     <footer class="app-footer">

@@ -219,7 +219,7 @@ watch(detailTab, tab => {
             <div class="stock-bar">
               <i
                 :style="{
-                  width: `${percent}%`,
+                  transform: `scaleX(${percent / 100})`,
                   background: 'linear-gradient(90deg, #0e7c66, #9fbf3a)'
                 }"
               ></i>

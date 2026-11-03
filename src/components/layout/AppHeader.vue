@@ -226,7 +226,12 @@ function go(path) {
   font-weight: 500;
   color: var(--text-2);
   white-space: nowrap;
-  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    transform var(--dur-press) var(--ease-out);
+}
+
+.nav-item:active {
+  transform: scale(0.97);
 }
 
 .nav-item:hover {
@@ -275,7 +280,12 @@ function go(path) {
   color: var(--text-3);
   font-size: 12.5px;
   cursor: pointer;
-  transition: all var(--dur-fast) ease;
+  transition: color var(--dur-fast) ease, border-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.search-trigger:active {
+  transform: scale(0.97);
 }
 
 .search-trigger:hover {
@@ -300,13 +310,20 @@ function go(path) {
   background: var(--surface);
   color: var(--text-2);
   cursor: pointer;
-  transition: all var(--dur-fast) ease;
+  transition: color var(--dur-fast) ease, border-color var(--dur-fast) ease,
+    transform var(--dur-fast) var(--ease-out);
 }
 
-.icon-btn:hover {
-  color: var(--primary);
-  border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .icon-btn:hover {
+    color: var(--primary);
+    border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+    transform: translateY(-1px);
+  }
+}
+
+.icon-btn:active {
+  transform: scale(0.94);
 }
 
 .badge {
@@ -343,7 +360,12 @@ function go(path) {
   border: 1px solid var(--border);
   background: var(--surface);
   cursor: pointer;
-  transition: all var(--dur-fast) ease;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.user-chip:active {
+  transform: scale(0.97);
 }
 
 .user-chip:hover {
@@ -442,7 +464,7 @@ function go(path) {
 
   .mobile-nav-enter-active,
   .mobile-nav-leave-active {
-    transition: opacity 0.2s ease, transform 0.24s var(--ease-out);
+    transition: opacity var(--dur-fast) ease, transform var(--dur-quick) var(--ease-out);
   }
 
   .mobile-nav-enter-from,

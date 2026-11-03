@@ -70,7 +70,12 @@
   background: transparent;
   color: var(--text-3);
   cursor: pointer;
-  transition: all var(--dur-fast) ease;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.view-switch button:active {
+  transform: scale(0.94);
 }
 
 .view-switch button.active {
@@ -103,7 +108,12 @@
   color: var(--text-2);
   font-size: 12.5px;
   cursor: pointer;
-  transition: all var(--dur-fast) ease;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
+}
+
+.fav-filter:active {
+  transform: scale(0.97);
 }
 
 .fav-filter:hover,
@@ -135,12 +145,17 @@
   color: var(--text-3);
   font-size: 12px;
   cursor: pointer;
-  transition: all var(--dur-fast) ease;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
 }
 
 .chip:hover {
   color: var(--primary);
   border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+}
+
+.chip:active {
+  transform: scale(0.96);
 }
 
 .chip.active {
@@ -171,11 +186,15 @@
 }
 
 .device-enter-active {
-  transition: all 0.4s var(--ease-out);
+  transition: opacity var(--dur-quick) var(--ease-out), transform var(--dur-quick) var(--ease-out);
 }
 
 .device-leave-active {
-  transition: all 0.2s ease;
+  transition: opacity var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+
+.device-move {
+  transition: transform var(--dur) var(--ease-out);
 }
 
 .device-enter-from,
@@ -202,7 +221,8 @@
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: all var(--dur) var(--ease-out);
+  transition: border-color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out),
+    transform var(--dur) var(--ease-out);
 }
 
 .ai-pick::after {

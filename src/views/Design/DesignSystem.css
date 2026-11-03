@@ -89,12 +89,17 @@
   color: var(--text-2);
   font-size: 11.5px;
   text-decoration: none;
-  transition: all var(--dur-fast) ease;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease, transform var(--dur-press) ease;
 }
 
 .ds-back:hover {
   color: var(--primary);
   border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+}
+
+.ds-back:active {
+  transform: scale(0.97);
 }
 
 .ds-main {
@@ -330,7 +335,8 @@
   border-radius: 999px;
   border: 1.5px solid var(--primary);
   background: color-mix(in srgb, var(--primary) 7%, transparent);
-  transition: all 0.2s ease;
+  transition: width var(--dur-fast) ease, height var(--dur-fast) ease,
+    border-color var(--dur-fast) ease, background-color var(--dur-fast) ease;
 }
 
 .mini-dot {

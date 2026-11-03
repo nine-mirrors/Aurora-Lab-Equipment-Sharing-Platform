@@ -62,12 +62,17 @@ const tabs = [
   color: var(--text-2);
   font-size: 12px;
   cursor: pointer;
-  transition: all var(--dur-fast) ease;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease, transform var(--dur-press) ease;
 }
 
 .tab-chip:hover {
   color: var(--primary);
   border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+}
+
+.tab-chip:active {
+  transform: scale(0.97);
 }
 
 .tab-chip.active {

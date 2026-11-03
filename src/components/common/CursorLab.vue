@@ -25,10 +25,7 @@ let pressTimer = null
 let reduceQuery = null
 let pointerQuery = null
 
-const x = { current: -200, target: -200 }
-const ring = { x: -200, y: -200 }
-const aura = { x: -200, y: -200 }
-const mouse = { x: -200, y: -200 }
+const pointer = { x: -200, y: -200 }
 
 const ripples = ref([])
 
@@ -82,10 +79,8 @@ function refreshMode() {
 
 function onPointerMove(event) {
   if (!enabled.value || event.pointerType !== 'mouse') return
-  mouse.x = event.clientX
-  mouse.y = event.clientY
-  x.target = event.clientX
-  x.current = event.clientX
+  pointer.x = event.clientX
+  pointer.y = event.clientY
   lastTarget = event.target
   visible.value = true
   mode.value = detectMode(event.target)
@@ -93,10 +88,8 @@ function onPointerMove(event) {
 
 function onPointerDown(event) {
   if (!enabled.value || event.pointerType !== 'mouse') return
-  mouse.x = event.clientX
-  mouse.y = event.clientY
-  x.target = event.clientX
-  x.current = event.clientX
+  pointer.x = event.clientX
+  pointer.y = event.clientY
   lastTarget = event.target
   visible.value = true
 
@@ -156,22 +149,18 @@ function onWindowBlur() {
 function tick() {
   if (!enabled.value) return
 
-  ring.x += (x.target - ring.x) * 0.22
-  ring.y += (mouse.y - ring.y) * 0.22
-  aura.x += (x.target - aura.x) * 0.075
-  aura.y += (mouse.y - aura.y) * 0.075
-
+  // 所有图层直接对齐指针坐标：去掉缓动追踪，避免光标与真实点击点脱节
   if (dotEl.value) {
-    dotEl.value.style.transform = `translate3d(${x.current}px, ${mouse.y}px, 0) translate(-50%, -50%)`
+    dotEl.value.style.transform = `translate3d(${pointer.x}px, ${pointer.y}px, 0) translate(-50%, -50%)`
   }
   if (ringEl.value) {
-    ringEl.value.style.transform = `translate3d(${ring.x}px, ${ring.y}px, 0) translate(-50%, -50%)`
+    ringEl.value.style.transform = `translate3d(${pointer.x}px, ${pointer.y}px, 0) translate(-50%, -50%)`
   }
   if (auraEl.value) {
-    auraEl.value.style.transform = `translate3d(${aura.x}px, ${aura.y}px, 0) translate(-50%, -50%)`
+    auraEl.value.style.transform = `translate3d(${pointer.x}px, ${pointer.y}px, 0) translate(-50%, -50%)`
   }
   if (badgeEl.value) {
-    badgeEl.value.style.transform = `translate3d(${x.current + 20}px, ${mouse.y + 18}px, 0)`
+    badgeEl.value.style.transform = `translate3d(${pointer.x + 20}px, ${pointer.y + 18}px, 0)`
   }
 
   raf = requestAnimationFrame(tick)

@@ -282,17 +282,16 @@ onBeforeUnmount(() => {
   backdrop-filter: blur(26px) saturate(160%);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255, 255, 255, 0.04);
-  animation: palette-in 0.3s var(--ease-out) both;
+  animation: palette-in 0.16s var(--ease-out) both;
 }
 
+/* 高频入口：只做透明度，不做位移与缩放 */
 @keyframes palette-in {
   from {
     opacity: 0;
-    transform: translateY(-14px) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 
@@ -478,9 +477,12 @@ onBeforeUnmount(() => {
   color: var(--primary);
 }
 
-.palette-enter-active,
+.palette-enter-active {
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
 .palette-leave-active {
-  transition: opacity 0.24s ease;
+  transition: opacity var(--dur-fast) ease;
 }
 
 .palette-enter-from,

@@ -208,10 +208,12 @@ button {
   gap: 3px;
 }
 
-.card-hover:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-md);
-  border-color: color-mix(in srgb, var(--primary) 26%, var(--border));
+@media (hover: hover) and (pointer: fine) {
+  .card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: color-mix(in srgb, var(--primary) 26%, var(--border));
+  }
 }
 
 .card-glass {
@@ -349,13 +351,21 @@ button {
   color: var(--text-2);
   font-size: 13px;
   cursor: pointer;
-  transition: all var(--dur) var(--ease-out);
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease, box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
-.tab-chip:hover {
-  border-color: color-mix(in srgb, var(--primary) 36%, var(--border));
-  color: var(--primary);
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .tab-chip:hover {
+    border-color: color-mix(in srgb, var(--primary) 36%, var(--border));
+    color: var(--primary);
+    transform: translateY(-1px);
+  }
+}
+
+.tab-chip:active {
+  transform: scale(0.97);
 }
 
 .tab-chip.active {
@@ -445,16 +455,17 @@ button {
   }
 }
 
+/* 只做位移，避免大半径 blur 元素反复重算栅格导致掉帧 */
 @keyframes drift {
   0%,
   100% {
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0);
   }
   33% {
-    transform: translate3d(3%, -4%, 0) scale(1.06);
+    transform: translate3d(3%, -4%, 0);
   }
   66% {
-    transform: translate3d(-3%, 3%, 0) scale(0.97);
+    transform: translate3d(-3%, 3%, 0);
   }
 }
 
@@ -484,7 +495,7 @@ button {
 }
 
 .fade-up {
-  animation: lab-fade-up 0.5s var(--ease-out) both;
+  animation: lab-fade-up var(--dur-enter) var(--ease-out) both;
 }
 
 .fade-up-1 {
@@ -504,12 +515,12 @@ button {
 }
 
 .fade-in {
-  animation: fade-in 0.45s var(--ease-out) both;
+  animation: fade-in var(--dur-enter) var(--ease-out) both;
 }
 
 /* 子元素依次入场 */
 .stagger > * {
-  animation: lab-fade-up 0.55s var(--ease-out) both;
+  animation: lab-fade-up var(--dur-enter) var(--ease-out) both;
 }
 
 .stagger > *:nth-child(1) { animation-delay: 0.02s; }
@@ -523,32 +534,52 @@ button {
 .stagger > *:nth-child(9) { animation-delay: 0.34s; }
 
 /* ---------- 页面过渡 ---------- */
+/* 只做透明度过渡：无位移/缩放/模糊，避免整页重绘与走位 */
 .route-enter-active {
-  transition: opacity 0.42s var(--ease-out), transform 0.42s var(--ease-out),
-    filter 0.42s var(--ease-out);
-  will-change: opacity, transform;
+  transition: opacity var(--dur) var(--ease-out);
 }
 
 .route-leave-active {
-  transition: opacity 0.18s ease, transform 0.18s ease, filter 0.18s ease;
+  transition: opacity var(--dur-fast) ease;
 }
 
 .route-enter-from {
   opacity: 0;
-  transform: translateY(16px) scale(0.994);
-  filter: blur(6px);
 }
 
 .route-leave-to {
   opacity: 0;
-  transform: translateY(-8px) scale(0.998);
-  filter: blur(3px);
+}
+
+/* 布局内页面切换：新旧视图交叉淡化
+   旧视图脱离文档流叠在新视图上淡出，新视图当帧就在流内开始淡入，
+   因此不存在 out-in 的空白间隙；仍然只动 opacity，无位移、无缩放。
+   高度由新视图决定，旧视图绝对定位不参与文档流，不会引起高度跳动。 */
+.route-stage {
+  position: relative;
+}
+
+.route-view-enter-active {
+  transition: opacity var(--dur) var(--ease-out);
+}
+
+.route-view-leave-active {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-fast) ease;
+}
+
+.route-view-enter-from,
+.route-view-leave-to {
+  opacity: 0;
 }
 
 /* 模态类过渡 */
 .pop-enter-active,
 .pop-leave-active {
-  transition: opacity 0.24s var(--ease-out), transform 0.32s var(--ease-out);
+  transition: opacity var(--dur-quick) var(--ease-out), transform var(--dur) var(--ease-out);
 }
 
 .pop-enter-from,
@@ -574,7 +605,7 @@ button {
 
 /* ---------- 鼠标倾斜 ---------- */
 .tilt-target {
-  transition: transform 0.24s var(--ease-out);
+  transition: transform var(--dur-quick) var(--ease-out);
   transform-style: preserve-3d;
 }
 
@@ -604,7 +635,12 @@ button {
 }
 
 .el-button--primary:not(.is-plain):not(.is-text):not(.is-link):not(.is-disabled):active {
-  transform: translateY(0) scale(0.99);
+  transform: translateY(0) scale(0.97);
+}
+
+/* 所有可点击按钮统一 press 反馈，避免只有 hover 没有按下感 */
+.el-button:not(.is-disabled):active {
+  transform: scale(0.97);
 }
 
 .el-button.is-plain {
@@ -683,7 +719,7 @@ button {
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   border: 1px solid var(--border);
-  animation: scale-in 0.32s var(--ease-out) both;
+  animation: scale-in var(--dur) var(--ease-out) both;
 }
 
 .el-overlay {
@@ -859,13 +895,16 @@ button {
   }
 }
 
+/* 减弱而非全灭：保留透明度/颜色反馈，去掉位移、缩放、循环与长动画 */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 0.001ms !important;
+    animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
+    animation-delay: 0s !important;
+    transition-property: opacity, color, background-color, border-color, box-shadow !important;
+    transition-duration: 0.12s !important;
     scroll-behavior: auto !important;
   }
 }

@@ -94,12 +94,17 @@
   background: rgba(255, 255, 255, 0.05);
   color: rgba(226, 238, 255, 0.6);
   cursor: pointer;
-  transition: all var(--dur-fast) ease;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease, transform var(--dur-press) ease;
 }
 
 .collapse-btn:hover {
   color: #fff;
   background: rgba(255, 255, 255, 0.12);
+}
+
+.collapse-btn:active {
+  transform: scale(0.94);
 }
 
 .nav {
@@ -139,13 +144,19 @@
   border-radius: 12px;
   color: rgba(219, 232, 255, 0.68);
   border: 1px solid transparent;
-  transition: all var(--dur) var(--ease-out);
+  transition: color var(--dur) var(--ease-out), background-color var(--dur) var(--ease-out),
+    border-color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out),
+    transform var(--dur-press) ease;
 }
 
 .nav-item:hover {
   color: #fff;
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.06);
+}
+
+.nav-item:active {
+  transform: scale(0.98);
 }
 
 .nav-item.active {
@@ -165,7 +176,7 @@
   border-radius: 9px;
   font-size: 16px;
   background: rgba(255, 255, 255, 0.06);
-  transition: all var(--dur) var(--ease-out);
+  transition: background-color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
 }
 
 .nav-item.active .nav-icon {
@@ -324,12 +335,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--dur-fast) ease;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    transform var(--dur-press) ease;
 }
 
 .logout-btn:hover {
   background: rgba(248, 72, 75, 0.16);
   color: #ff8f91;
+}
+
+.logout-btn:active {
+  transform: scale(0.94);
 }
 
 /* ---------- 收起态 ---------- */
@@ -389,7 +405,7 @@
 
 .mask-enter-active,
 .mask-leave-active {
-  transition: opacity 0.24s ease;
+  transition: opacity var(--dur-quick) ease;
 }
 
 .mask-enter-from,

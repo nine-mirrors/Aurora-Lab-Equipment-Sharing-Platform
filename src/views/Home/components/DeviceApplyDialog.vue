@@ -340,12 +340,19 @@ async function submit() {
   color: var(--violet);
   font-size: 10px;
   cursor: pointer;
-  transition: all var(--dur-fast) ease;
+  transition: background-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease,
+    opacity var(--dur-fast) ease, transform var(--dur-fast) ease;
 }
 
-.ai-mini:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 14px -8px rgba(184, 106, 69, 0.65);
+@media (hover: hover) and (pointer: fine) {
+  .ai-mini:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px -8px rgba(184, 106, 69, 0.65);
+  }
+}
+
+.ai-mini:active:not(:disabled) {
+  transform: scale(0.96);
 }
 
 .ai-mini:disabled {

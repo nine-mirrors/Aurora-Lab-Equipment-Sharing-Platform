@@ -74,11 +74,13 @@ const today = new Date().toLocaleDateString('zh-CN', {
       </header>
 
       <main class="admin-content">
-        <RouterView v-slot="{ Component }">
-          <Transition name="route" mode="out-in">
-            <component :is="Component" :key="route.path" />
-          </Transition>
-        </RouterView>
+        <div class="route-stage">
+          <RouterView v-slot="{ Component }">
+            <Transition name="route-view">
+              <component :is="Component" :key="route.path" />
+            </Transition>
+          </RouterView>
+        </div>
       </main>
     </div>
   </div>
@@ -218,12 +220,17 @@ const today = new Date().toLocaleDateString('zh-CN', {
   color: var(--text-3);
   font-size: 12px;
   cursor: pointer;
-  transition: all var(--dur-fast) ease;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease, transform var(--dur-press) ease;
 }
 
 .topbar-search:hover {
   color: var(--primary);
   border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+}
+
+.topbar-search:active {
+  transform: scale(0.98);
 }
 
 .icon-btn {
@@ -238,13 +245,20 @@ const today = new Date().toLocaleDateString('zh-CN', {
   background: var(--surface);
   color: var(--text-2);
   cursor: pointer;
-  transition: all var(--dur-fast) ease;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease, transform var(--dur-quick) var(--ease-out);
 }
 
-.icon-btn:hover {
-  color: var(--primary);
-  border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .icon-btn:hover {
+    color: var(--primary);
+    border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+    transform: translateY(-1px);
+  }
+}
+
+.icon-btn:active {
+  transform: scale(0.94);
 }
 
 .badge {
