@@ -99,7 +99,10 @@ const creditStats = computed(() => {
   })()
 
   const overdue = list.filter(
-    item => item.status === 'approved' && item.borrow_end < today
+    item =>
+      ['approved', 'returning'].includes(item.status) &&
+      item.borrow_end &&
+      item.borrow_end < today
   ).length
   const rejected = list.filter(item => item.status === 'rejected').length
   const returned = list.filter(item => item.status === 'returned').length
@@ -130,6 +133,11 @@ watch(
 
 watch(notifyEnabled, value => {
   localStorage.setItem('lab_notify_enabled', value ? '1' : '0')
+})
+
+// 关闭注销弹窗时清空密码，避免下次打开残留
+watch(deleteVisible, visible => {
+  if (!visible) deletePassword.value = ''
 })
 
 async function saveProfile() {
@@ -527,7 +535,7 @@ async function handleLogout() {
               <strong>消息通知</strong>
               <span>接收审批结果与到期提醒</span>
             </div>
-            <el-switch v-model="notifyEnabled" />
+            <el-switch v-model="notifyEnabled" aria-label="开启审批结果与到期提醒" />
           </div>
         </section>
 

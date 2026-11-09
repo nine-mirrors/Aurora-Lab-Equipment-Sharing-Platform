@@ -278,5 +278,31 @@
     grid-template-columns: 1fr;
   }
 
+  /* 触控区 ≥40px */
+  .chip,
+  .fav-filter,
+  .ai-pick,
+  .banner-link {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+  }
 
+  .ai-pick {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  /* 分类横向滚动时用右侧渐隐提示还有内容 */
+  .category-chips {
+    padding-right: 26px;
+    margin-right: -12px;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent);
+  }
+
+  .view-switch button {
+    width: 40px;
+    height: 40px;
+  }
 }

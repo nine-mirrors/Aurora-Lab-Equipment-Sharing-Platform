@@ -227,8 +227,17 @@ async function loadRecords() {
 
 async function handleReturn(row) {
   if (returning.value) return
-  returning.value = true
+  try {
+    await ElMessageBox.confirm(
+      `提交后「${row.device_name}」将进入归还确认流程，请确认设备与配件已完整放回。`,
+      '确认归还',
+      { confirmButtonText: '提交归还', cancelButtonText: '再检查一下', type: 'warning' }
+    )
+  } catch {
+    return
+  }
 
+  returning.value = true
   try {
     const res = await returnBooking(row.id)
     if (res.code !== 200) {
@@ -380,6 +389,58 @@ onMounted(loadRecords)
             </template>
           </el-table-column>
         </el-table>
+
+        <ul class="apply-cards">
+          <li v-for="row in paged" :key="row.id" class="apply-card" @click="openDetail(row)">
+            <div class="apply-card-top">
+              <div class="device-cell">
+                <span class="device-initial">{{ (row.category || '设').slice(0, 1) }}</span>
+                <div>
+                  <strong>{{ row.device_name }}</strong>
+                  <span>{{ row.category }}</span>
+                </div>
+              </div>
+              <StatusPill :status="displayStatus(row)" size="sm" />
+            </div>
+
+            <div class="apply-card-meta">
+              <span>借用 {{ row.borrow_start }} → {{ row.borrow_end }}</span>
+              <span>申请 {{ formatDate(row.created_at) }}</span>
+            </div>
+
+            <div class="row-actions">
+              <el-button
+                v-if="canCancel(row)"
+                size="small"
+                type="danger"
+                plain
+                @click.stop="handleCancel(row)"
+              >
+                取消
+              </el-button>
+              <el-button
+                v-else-if="row.status === 'approved'"
+                size="small"
+                type="primary"
+                plain
+                @click.stop="handleReturn(row)"
+              >
+                归还
+              </el-button>
+              <el-button
+                v-else-if="canReview(row)"
+                size="small"
+                type="primary"
+                plain
+                @click.stop="openReview(row)"
+              >
+                评价
+              </el-button>
+              <span v-else-if="isReviewed(row)" class="muted small">已评价</span>
+              <span v-else class="muted small">—</span>
+            </div>
+          </li>
+        </ul>
 
         <el-pagination
           v-if="filtered.length > pageSize"

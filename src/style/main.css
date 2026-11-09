@@ -278,6 +278,14 @@ button {
   margin-bottom: 18px;
 }
 
+/* 图表等宽内容不应把网格撑破（移动端横向滚动的根因） */
+.grid-2 > *,
+.grid-2-even > *,
+.grid-3 > *,
+.stat-grid > * {
+  min-width: 0;
+}
+
 .stat-grid.cols-6 {
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
@@ -774,6 +782,91 @@ button {
   --el-tag-bg-color: color-mix(in srgb, var(--el-tag-text-color) 11%, transparent);
 }
 
+/* ---------- 无障碍：统一可见焦点 ---------- */
+:where(a, button, [tabindex], input, textarea, select):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.el-button:focus-visible,
+.el-switch:focus-visible,
+.el-input__wrapper:focus-within {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translate(-50%, -160%);
+  z-index: 4000;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.skip-link:focus-visible {
+  transform: translate(-50%, 0);
+  outline-offset: 3px;
+}
+
+/* ---------- 动效减弱：保留透明度反馈，停掉循环类动画 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- 窄屏：弹窗 / 抽屉 / 消息框不再固定宽度 ---------- */
+@media (max-width: 640px) {
+  .el-dialog {
+    width: calc(100vw - 28px) !important;
+    max-width: calc(100vw - 28px);
+    margin-top: 5vh !important;
+  }
+
+  .el-dialog__header {
+    padding: 18px 18px 4px;
+  }
+
+  .el-dialog__body {
+    padding: 12px 18px 16px;
+  }
+
+  .el-dialog__footer {
+    padding: 0 18px 18px;
+  }
+
+  .el-drawer {
+    width: calc(100vw - 12px) !important;
+    max-width: 100vw;
+    border-radius: 18px 0 0 18px;
+  }
+
+  .el-drawer__header {
+    padding: 18px 18px 10px;
+  }
+
+  .el-drawer__body {
+    padding: 6px 18px 20px;
+  }
+
+  .el-message-box {
+    width: calc(100vw - 36px) !important;
+    max-width: 420px;
+  }
+}
+
 .el-pagination {
   --el-pagination-button-bg-color: var(--bg-elevated);
   --el-pagination-hover-color: var(--primary);
@@ -867,7 +960,7 @@ button {
 @media (max-width: 1100px) {
   .grid-2,
   .grid-2-even {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .stat-grid {
@@ -892,6 +985,75 @@ button {
 
   .grid-3 {
     grid-template-columns: 1fr;
+  }
+}
+
+/* 触屏下保证可点区域 ≥40px */
+@media (max-width: 640px) {
+  .el-button {
+    min-height: 40px;
+  }
+
+  .el-input__wrapper,
+  .el-select__wrapper,
+  .el-textarea__inner {
+    min-height: 40px !important;
+  }
+
+  .more-link,
+  .ghost-link {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .tab-chip {
+    min-height: 40px;
+  }
+
+  /* 分页：390 下单行放下（隐藏省略号），并放大可点区 */
+  .el-pagination {
+    flex-wrap: nowrap;
+    max-width: 100%;
+  }
+
+  .el-pagination .el-pager {
+    flex-wrap: nowrap;
+    min-width: 0;
+  }
+
+  .el-pagination .el-pager li.more {
+    display: none;
+  }
+
+  .el-pagination button,
+  .el-pagination .el-pager li {
+    min-width: 40px !important;
+    height: 40px !important;
+    line-height: 40px;
+  }
+
+  .el-pagination .el-pager li {
+    margin: 0 2px !important;
+  }
+
+  .el-pagination .el-select .el-select__wrapper {
+    min-height: 40px !important;
+  }
+
+  /* 数字输入框的加减按钮同步放大 */
+  .el-input-number {
+    --el-input-number-controls-width: 40px;
+    min-height: 42px;
+  }
+
+  .el-input-number__decrease,
+  .el-input-number__increase {
+    width: 40px !important;
+  }
+
+  .el-input-number .el-input__wrapper {
+    min-height: 42px !important;
   }
 }
 

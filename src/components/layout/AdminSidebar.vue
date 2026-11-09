@@ -127,7 +127,7 @@ function logout() {
         <span class="status-ring"><i></i></span>
         <div class="status-copy">
           <strong>系统运行正常</strong>
-          <small>本地服务 · 3000 端口</small>
+          <small>本地服务 · 已连接</small>
         </div>
       </div>
 

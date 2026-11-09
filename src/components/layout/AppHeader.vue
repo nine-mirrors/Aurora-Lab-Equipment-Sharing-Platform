@@ -5,15 +5,26 @@ import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/useUserStore'
 import { useUiStore } from '@/stores/Ui'
 import { useNotificationStore } from '@/stores/Notification'
+import { useAiStore } from '@/stores/useAiStore'
 import BrandMark from '@/components/common/BrandMark.vue'
 import ThemeToggle from '@/components/common/ThemeToggle.vue'
-import { ArrowDown, Menu as MenuIcon, Moon, Search, Sunny, SwitchButton, User } from '@element-plus/icons-vue'
+import {
+  ArrowDown,
+  MagicStick,
+  Menu as MenuIcon,
+  Moon,
+  Search,
+  Sunny,
+  SwitchButton,
+  User
+} from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const ui = useUiStore()
 const notificationStore = useNotificationStore()
+const ai = useAiStore()
 
 const mobileOpen = ref(false)
 
@@ -53,6 +64,11 @@ function handleCommand(command) {
 function go(path) {
   mobileOpen.value = false
   router.push(path)
+}
+
+function openAi() {
+  mobileOpen.value = false
+  ai.openDrawer()
 }
 </script>
 
@@ -123,7 +139,13 @@ function go(path) {
           </template>
         </el-dropdown>
 
-        <button class="icon-btn menu-btn" type="button" @click="mobileOpen = !mobileOpen">
+        <button
+          class="icon-btn menu-btn"
+          type="button"
+          :aria-expanded="mobileOpen"
+          aria-label="打开导航菜单"
+          @click="mobileOpen = !mobileOpen"
+        >
           <el-icon><MenuIcon /></el-icon>
         </button>
       </div>
@@ -131,6 +153,11 @@ function go(path) {
 
     <Transition name="mobile-nav">
       <nav v-if="mobileOpen" class="mobile-nav">
+        <button type="button" class="mobile-nav-item" @click="openAi">
+          <el-icon><MagicStick /></el-icon>
+          极光 AI 助手
+        </button>
+
         <button
           v-for="item in navList"
           :key="item.path"
@@ -272,7 +299,7 @@ function go(path) {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 34px;
+  height: 40px;
   padding: 0 10px 0 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
@@ -300,8 +327,8 @@ function go(path) {
 
 .icon-btn {
   position: relative;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -446,6 +473,10 @@ function go(path) {
   }
 
   .mobile-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
     padding: 11px 14px;
     border: none;
     border-radius: 10px;
@@ -509,9 +540,18 @@ function go(path) {
   }
 
   .search-trigger {
-    width: 34px;
+    width: 40px;
     padding: 0;
     justify-content: center;
+  }
+
+  .brand {
+    min-height: 40px;
+  }
+
+  .user-chip {
+    min-height: 40px;
+    height: 40px;
   }
 
   .search-trigger .kbd {

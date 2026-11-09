@@ -159,3 +159,64 @@
   }
 
 }
+
+/* ---------- 小屏卡片列表（替代表格横向滚动） ---------- */
+.apply-cards {
+  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.apply-card {
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) ease;
+}
+
+.apply-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.apply-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 9px;
+  font-size: 11.5px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.apply-card .row-actions {
+  margin-top: 11px;
+  justify-content: flex-start;
+}
+
+.apply-card .row-actions :deep(.el-button) {
+  margin-left: 0;
+  margin-right: 8px;
+}
+
+@media (max-width: 700px) {
+  .record-table {
+    display: none;
+  }
+
+  .apply-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .apply-card .row-actions :deep(.el-button) {
+    min-height: 40px;
+  }
+}

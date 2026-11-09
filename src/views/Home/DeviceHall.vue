@@ -1,7 +1,7 @@
 <!-- 设备大厅：收藏、排序、视图切换与借用申请 -->
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Grid, List, MagicStick, Search, Star, StarFilled } from '@element-plus/icons-vue'
 import { getDeviceList } from '@/api/device'
@@ -20,6 +20,7 @@ import DeviceReportDialog from './components/DeviceReportDialog.vue'
 import { canApply, isRepairing } from '@/utils/device-presenter'
 
 const route = useRoute()
+const router = useRouter()
 const favoriteStore = useFavoriteStore()
 const ai = useAiStore()
 const userStore = useUserStore()
@@ -28,6 +29,7 @@ const isBlacklisted = computed(() => Boolean(userStore.userInfo?.blacklisted))
 
 const loading = ref(false)
 const firstLoading = ref(true)
+const loadError = ref(false)
 const devices = ref([])
 const total = ref(0)
 const page = ref(1)
@@ -55,23 +57,8 @@ const palette = ['#0e7c66', '#9fbf3a', '#c98a26', '#b86a45', '#2f9e8f', '#7e9487
 
 const activeStatusRank = { pending: 3, approved: 4, returning: 5 }
 
-const displayDevices = computed(() => {
-  let list = [...devices.value]
-
-  if (onlyFavorite.value) {
-    list = list.filter(item => favoriteStore.has(item.id))
-  }
-
-  if (sortBy.value === 'stock') {
-    list.sort((a, b) => Number(b.available_qty) - Number(a.available_qty))
-  } else if (sortBy.value === 'name') {
-    list.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
-  } else if (sortBy.value === 'category') {
-    list.sort((a, b) => String(a.category).localeCompare(String(b.category), 'zh-CN'))
-  }
-
-  return list
-})
+// 排序与收藏筛选都在服务端/全量数据上完成，避免只对当前页排序
+const displayDevices = computed(() => devices.value)
 
 const favoriteCount = computed(() => favoriteStore.count)
 
@@ -122,20 +109,42 @@ async function loadMine() {
 
 async function loadDevices() {
   loading.value = true
+  loadError.value = false
   try {
-    const res = await getDeviceList({
+    const params = {
       name: keyword.value.trim() || undefined,
       category: category.value || undefined,
       is_active: 1,
       available: onlyAvailable.value ? 1 : undefined,
-      page: page.value,
-      pageSize
-    })
+      sort: sortBy.value === 'default' ? undefined : sortBy.value
+    }
 
-    devices.value = res.data?.list || []
-    total.value = res.data?.total || 0
+    if (onlyFavorite.value) {
+      // 收藏是本地状态，取全量后本地筛选并分页，避免只筛当前页
+      const res = await getDeviceList({ ...params, page: 1, pageSize: 500 })
+      const list = (res.data?.list || []).filter(item => favoriteStore.has(item.id))
+      total.value = list.length
+      const lastPage = Math.max(1, Math.ceil(list.length / pageSize))
+      if (page.value > lastPage) page.value = lastPage
+      const start = (page.value - 1) * pageSize
+      devices.value = list.slice(start, start + pageSize)
+    } else {
+      const res = await getDeviceList({ ...params, page: page.value, pageSize })
+      if (res.code !== 200) throw new Error(res.message || '加载失败')
+      const list = res.data?.list || []
+      const totalCount = Number(res.data?.total || 0)
+      const lastPage = Math.max(1, Math.ceil(totalCount / pageSize))
+      if (!list.length && totalCount > 0 && page.value > lastPage) {
+        page.value = lastPage
+        return loadDevices()
+      }
+      devices.value = list
+      total.value = totalCount
+    }
+
+    syncQuery()
   } catch {
-    ElMessage.error('设备列表加载失败，请稍后重试')
+    loadError.value = true
     devices.value = []
     total.value = 0
   } finally {
@@ -149,12 +158,80 @@ function handleSearch() {
   loadDevices()
 }
 
-const debouncedSearch = useDebounce(handleSearch, 300)
+function showAllDevices() {
+  onlyFavorite.value = false
+  handleSearch()
+}
+
+const debouncedSearch = useDebounce(() => {
+  page.value = 1
+  loadDevices()
+}, 300)
 
 function selectCategory(name) {
   category.value = category.value === name ? '' : name
   handleSearch()
 }
+
+// 筛选条件写入 URL，刷新/分享/前进后退都能还原同一视图
+let syncingQuery = false
+
+function syncQuery() {
+  const query = {}
+  if (keyword.value.trim()) query.keyword = keyword.value.trim()
+  if (category.value) query.category = category.value
+  if (sortBy.value !== 'default') query.sort = sortBy.value
+  if (!onlyAvailable.value) query.available = '0'
+  if (onlyFavorite.value) query.fav = '1'
+  if (viewMode.value === 'list') query.view = 'list'
+  if (page.value > 1) query.page = String(page.value)
+
+  syncingQuery = true
+  router.replace({ query }).finally(() => {
+    syncingQuery = false
+  })
+}
+
+function readQueryState() {
+  const query = route.query
+  return {
+    keyword: typeof query.keyword === 'string' ? query.keyword : '',
+    category: typeof query.category === 'string' ? query.category : '',
+    sortBy: ['stock', 'name', 'category'].includes(query.sort) ? query.sort : 'default',
+    onlyAvailable: query.available !== '0',
+    onlyFavorite: query.fav === '1',
+    viewMode: query.view === 'list' ? 'list' : 'grid',
+    page: Math.max(1, Number(query.page) || 1)
+  }
+}
+
+function applyQueryState() {
+  const next = readQueryState()
+  const filtersChanged =
+    next.keyword !== keyword.value ||
+    next.category !== category.value ||
+    next.sortBy !== sortBy.value ||
+    next.onlyAvailable !== onlyAvailable.value ||
+    next.onlyFavorite !== onlyFavorite.value
+
+  keyword.value = next.keyword
+  category.value = next.category
+  sortBy.value = next.sortBy
+  onlyAvailable.value = next.onlyAvailable
+  onlyFavorite.value = next.onlyFavorite
+  viewMode.value = next.viewMode
+  page.value = next.page
+
+  if (filtersChanged) loadDevices()
+}
+
+watch(
+  () => route.fullPath,
+  () => {
+    if (syncingQuery) return
+    applyQueryState()
+  }
+)
 
 function handleReset() {
   keyword.value = ''
@@ -238,22 +315,16 @@ function handlePageChange(value) {
   loadDevices()
 }
 
-watch(
-  () => route.query.keyword,
-  value => {
-    const next = typeof value === 'string' ? value : ''
-    if (next && next !== keyword.value) {
-      keyword.value = next
-      page.value = 1
-      loadDevices()
-    }
-  }
-)
-
 onMounted(async () => {
-  if (typeof route.query.keyword === 'string') {
-    keyword.value = route.query.keyword
-  }
+  const queryState = readQueryState()
+  keyword.value = queryState.keyword
+  category.value = queryState.category
+  sortBy.value = queryState.sortBy
+  onlyAvailable.value = queryState.onlyAvailable
+  onlyFavorite.value = queryState.onlyFavorite
+  viewMode.value = queryState.viewMode
+  page.value = queryState.page
+
   await Promise.all([loadCategories(), loadMine()])
   await loadDevices()
 })
@@ -281,20 +352,24 @@ onMounted(async () => {
           <span>我的收藏</span>
           <strong>{{ favoriteCount }}</strong>
         </div>
-        <div class="view-switch">
+        <div class="view-switch" role="group" aria-label="切换设备展示方式">
           <button
             type="button"
             :class="{ active: viewMode === 'grid' }"
+            :aria-pressed="viewMode === 'grid'"
+            aria-label="卡片视图"
             title="卡片视图"
-            @click="viewMode = 'grid'"
+            @click="viewMode = 'grid'; syncQuery()"
           >
             <el-icon><Grid /></el-icon>
           </button>
           <button
             type="button"
             :class="{ active: viewMode === 'list' }"
+            :aria-pressed="viewMode === 'list'"
+            aria-label="列表视图"
             title="列表视图"
-            @click="viewMode = 'list'"
+            @click="viewMode = 'list'; syncQuery()"
           >
             <el-icon><List /></el-icon>
           </button>
@@ -309,6 +384,7 @@ onMounted(async () => {
         placeholder="搜索设备名称或用途"
         clearable
         :prefix-icon="Search"
+        aria-label="搜索设备"
         @input="debouncedSearch"
         @keyup.enter="handleSearch"
         @clear="handleSearch"
@@ -318,20 +394,26 @@ onMounted(async () => {
         <el-option v-for="item in categoryList" :key="item.id" :label="item.name" :value="item.name" />
       </el-select>
 
-      <el-select v-model="sortBy" class="sort-select" @change="handleSearch">
+      <el-select v-model="sortBy" class="sort-select" aria-label="排序方式" @change="handleSearch">
         <el-option label="默认排序" value="default" />
         <el-option label="库存优先" value="stock" />
         <el-option label="按名称" value="name" />
         <el-option label="按分类" value="category" />
       </el-select>
 
-      <el-switch v-model="onlyAvailable" active-text="仅看可借" @change="handleSearch" />
+      <el-switch
+        v-model="onlyAvailable"
+        active-text="仅看可借"
+        aria-label="仅看可借设备"
+        @change="handleSearch"
+      />
 
       <button
         type="button"
         class="fav-filter"
         :class="{ active: onlyFavorite }"
-        @click="onlyFavorite = !onlyFavorite"
+        :aria-pressed="onlyFavorite"
+        @click="onlyFavorite = !onlyFavorite; handleSearch()"
       >
         <el-icon><StarFilled v-if="onlyFavorite" /><Star v-else /></el-icon>
         仅看收藏
@@ -348,6 +430,7 @@ onMounted(async () => {
         type="button"
         class="chip"
         :class="{ active: !category }"
+        :aria-pressed="!category"
         @click="selectCategory('')"
       >
         全部
@@ -358,6 +441,7 @@ onMounted(async () => {
         type="button"
         class="chip"
         :class="{ active: category === item.name }"
+        :aria-pressed="category === item.name"
         @click="selectCategory(item.name)"
       >
         {{ item.name }}
@@ -394,12 +478,22 @@ onMounted(async () => {
       </TransitionGroup>
 
       <EmptyState
+        v-else-if="loadError"
+        class="card"
+        tone="error"
+        title="设备列表加载失败"
+        description="网络或服务暂不可用，请稍后重试"
+        action-text="重新加载"
+        @action="loadDevices"
+      />
+
+      <EmptyState
         v-else-if="!loading"
         class="card"
         :title="onlyFavorite ? '还没有收藏设备' : '没有找到符合条件的设备'"
         :description="onlyFavorite ? '点击设备卡片右上角的星标即可收藏，方便下次快速找到' : '试试更换关键词、分类，或关闭「仅看可借」'"
         :action-text="onlyFavorite ? '查看全部设备' : '重置筛选'"
-        @action="onlyFavorite ? (onlyFavorite = false) : handleReset()"
+        @action="onlyFavorite ? showAllDevices() : handleReset()"
       />
     </div>
 
@@ -408,6 +502,7 @@ onMounted(async () => {
       v-model:current-page="page"
       background
       layout="prev, pager, next"
+      :pager-count="5"
       :page-size="pageSize"
       :total="total"
       @current-change="handlePageChange"
@@ -424,7 +519,7 @@ onMounted(async () => {
       @report="openReport"
       @apply="openApply"
       @apply-day="date => openApply(currentDevice, date)"
-    />>
+    />
 
     <DeviceApplyDialog
       v-model="applyVisible"

@@ -26,7 +26,7 @@ const blacklistReason = computed(
 
     <AppHeader />
 
-    <main class="layout-main">
+    <main id="main-content" class="layout-main" tabindex="-1">
       <div v-if="isBlacklisted" class="blacklist-banner">
         <span class="banner-icon"><el-icon><WarningFilled /></el-icon></span>
         <div class="banner-copy">
@@ -253,6 +253,14 @@ const blacklistReason = computed(
   .footer-links {
     order: 3;
     width: 100%;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+  }
+
+  .footer-links a {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
   }
 
   .footer-meta {
@@ -261,6 +269,12 @@ const blacklistReason = computed(
 
   .copyright {
     display: none;
+  }
+
+  .banner-link {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
   }
 }
 </style>

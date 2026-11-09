@@ -807,19 +807,32 @@
   opacity: 0;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 700px) {
+  /* 小屏隐藏悬浮球，改用顶栏 / 菜单内的 AI 入口，避免遮挡卡片内容 */
   .ai-orb {
-    right: 16px;
-    bottom: 18px;
-    width: 54px;
-    height: 54px;
+    display: none;
   }
 
-  .orb-core {
-    width: 48px;
-    height: 48px;
+  /* 抽屉内触控区 ≥40px */
+  .ai-head-actions button {
+    width: 40px;
+    height: 40px;
   }
 
+  .ai-quick button {
+    min-height: 40px;
+    padding: 0 13px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .msg-actions button {
+    min-height: 40px;
+    padding: 0 11px;
+  }
+}
+
+@media (max-width: 520px) {
   .ai-panel {
     width: 100vw;
   }

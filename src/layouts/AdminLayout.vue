@@ -6,11 +6,13 @@ import ThemeToggle from '@/components/common/ThemeToggle.vue'
 import ParticleField from '@/components/common/ParticleField.vue'
 import { useUiStore } from '@/stores/Ui'
 import { useNotificationStore } from '@/stores/Notification'
-import { Bell, Menu, Search } from '@element-plus/icons-vue'
+import { useAiStore } from '@/stores/useAiStore'
+import { Bell, MagicStick, Menu, Search } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const ui = useUiStore()
 const notificationStore = useNotificationStore()
+const ai = useAiStore()
 
 const mobileOpen = ref(false)
 
@@ -59,6 +61,17 @@ const today = new Date().toLocaleDateString('zh-CN', {
             <span class="kbd">⌘K</span>
           </button>
 
+          <button
+            class="icon-btn ai-entry"
+            type="button"
+            title="极光 AI 助手"
+            aria-label="打开极光 AI 助手"
+            aria-haspopup="dialog"
+            @click="ai.openDrawer()"
+          >
+            <el-icon><MagicStick /></el-icon>
+          </button>
+
           <ThemeToggle />
 
           <button class="icon-btn" type="button" title="通知中心" @click="ui.openNotifications()">
@@ -73,7 +86,7 @@ const today = new Date().toLocaleDateString('zh-CN', {
         </div>
       </header>
 
-      <main class="admin-content">
+      <main id="main-content" class="admin-content" tabindex="-1">
         <div class="route-stage">
           <RouterView v-slot="{ Component }">
             <Transition name="route-view">
@@ -235,8 +248,8 @@ const today = new Date().toLocaleDateString('zh-CN', {
 
 .icon-btn {
   position: relative;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -300,6 +313,11 @@ const today = new Date().toLocaleDateString('zh-CN', {
   flex: none;
 }
 
+/* 小屏悬浮球隐藏后，AI 入口收进顶栏 */
+.ai-entry {
+  display: none;
+}
+
 .admin-content {
   flex: 1;
   min-width: 0;
@@ -323,6 +341,8 @@ const today = new Date().toLocaleDateString('zh-CN', {
 
   .mobile-menu {
     display: inline-flex;
+    width: 40px;
+    height: 40px;
   }
 
   .title-row span,
@@ -333,13 +353,35 @@ const today = new Date().toLocaleDateString('zh-CN', {
   }
 
   .topbar-search {
-    width: 32px;
+    width: 40px;
+    height: 40px;
     padding: 0;
     justify-content: center;
   }
 
   .title-row h2 {
     font-size: 15px;
+  }
+}
+
+@media (max-width: 700px) {
+  /* 小屏隐藏面包屑，避免「管理后台 / 页面名」折行把顶栏撑高 */
+  .crumbs {
+    display: none;
+  }
+
+  .title-box {
+    overflow: hidden;
+  }
+
+  .title-row h2 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .ai-entry {
+    display: inline-flex;
   }
 }
 </style>
