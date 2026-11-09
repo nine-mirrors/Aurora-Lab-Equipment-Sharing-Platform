@@ -47,7 +47,7 @@ function close() {
   >
     <template v-if="row">
       <div class="detail-hero">
-        <button class="drawer-close" type="button" @click="close">
+        <button class="drawer-close" type="button" aria-label="关闭申请详情" @click="close">
           <el-icon><Close /></el-icon>
         </button>
         <span class="detail-initial">{{ (row.category || '设').slice(0, 1) }}</span>
@@ -183,6 +183,11 @@ function close() {
         <template v-else-if="status === 'returning'">
           <el-button type="danger" plain @click="emit('return-reject', row)">拒绝归还</el-button>
           <el-button type="success" @click="emit('confirm-return', row)">确认归还</el-button>
+        </template>
+
+        <template v-else>
+          <span class="drawer-hint">该申请当前无需处理</span>
+          <el-button @click="close">关闭</el-button>
         </template>
       </div>
     </template>

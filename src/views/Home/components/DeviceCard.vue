@@ -34,15 +34,12 @@ const action = computed(() =>
   actionText(props.device, { blacklisted: props.blacklisted, activeStatus: props.activeStatus })
 )
 
-const stockStyle = computed(() => ({
-  transform: `scaleX(${percent.value / 100})`,
-  background:
-    percent.value > 40
-      ? 'linear-gradient(90deg, #0e7c66, #9fbf3a)'
-      : percent.value > 0
-        ? 'linear-gradient(90deg, #c98a26, #c94f45)'
-        : 'var(--border-strong)'
-}))
+const stockStyle = computed(() => ({ transform: `scaleX(${percent.value / 100})` }))
+const stockTone = computed(() => {
+  if (percent.value <= 0) return 'is-empty'
+  if (percent.value <= 40) return 'is-low'
+  return 'is-ok'
+})
 </script>
 
 <template>
@@ -63,7 +60,16 @@ const stockStyle = computed(() => ({
           background: `color-mix(in srgb, ${accent} 12%, transparent)`
         }"
       >
-        <img v-if="device.image" :src="device.image" alt="" class="device-thumb" />
+        <img
+          v-if="device.image"
+          :src="device.image"
+          alt=""
+          class="device-thumb"
+          width="38"
+          height="38"
+          loading="lazy"
+          decoding="async"
+        />
         <template v-else>{{ categoryInitial(device.category) }}</template>
       </span>
       <span class="device-category">{{ device.category }}</span>
@@ -71,7 +77,8 @@ const stockStyle = computed(() => ({
         type="button"
         class="fav-btn"
         :class="{ on: favorite }"
-        :title="favorite ? '取消收藏' : '收藏设备'"
+        :aria-label="favorite ? `取消收藏 ${device.name}` : `收藏 ${device.name}`"
+        :aria-pressed="favorite"
         @click.stop="emit('toggle-favorite', device)"
       >
         <el-icon><StarFilled v-if="favorite" /><Star v-else /></el-icon>
@@ -98,7 +105,7 @@ const stockStyle = computed(() => ({
       </div>
 
       <div class="stock-line">
-        <div class="stock-bar">
+        <div class="stock-bar" :class="stockTone">
           <i :style="stockStyle"></i>
         </div>
         <span class="stock-text">
@@ -191,8 +198,10 @@ const stockStyle = computed(() => ({
 }
 
 .fav-btn {
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
+  min-width: 38px;
+  min-height: 38px;
   flex: none;
   display: flex;
   align-items: center;
@@ -317,6 +326,18 @@ const stockStyle = computed(() => ({
   transition: transform var(--dur-slow) var(--ease-out);
 }
 
+.stock-bar.is-ok i {
+  background: linear-gradient(90deg, var(--primary), var(--lime));
+}
+
+.stock-bar.is-low i {
+  background: linear-gradient(90deg, var(--amber), var(--red));
+}
+
+.stock-bar.is-empty i {
+  background: var(--border-strong);
+}
+
 .stock-text {
   font-size: 11px;
   color: var(--text-3);
@@ -398,6 +419,11 @@ const stockStyle = computed(() => ({
   .device-card.is-list .device-foot {
     justify-content: space-between;
     padding-top: 8px;
+  }
+
+  .fav-btn {
+    min-width: 40px;
+    min-height: 40px;
   }
 }
 </style>

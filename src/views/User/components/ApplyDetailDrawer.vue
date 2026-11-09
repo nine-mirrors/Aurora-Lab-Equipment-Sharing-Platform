@@ -1,6 +1,6 @@
 <!-- 我的申请：借用详情抽屉 -->
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Check, Clock, Close, CopyDocument, StarFilled, Warning } from '@element-plus/icons-vue'
 import { formatDateTime } from '@/utils/date'
@@ -15,11 +15,20 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'cancel', 'pickup', 'extend', 'return', 'review'])
 
-const today = (() => {
+function todayKey() {
   const now = new Date()
   const pad = num => String(num).padStart(2, '0')
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
-})()
+}
+
+// 跨天后再打开抽屉要按新的“今天”判断，不能沿用组件初始化时的日期
+const today = ref(todayKey())
+watch(
+  () => props.modelValue,
+  open => {
+    if (open) today.value = todayKey()
+  }
+)
 
 const timeline = computed(() => {
   const record = props.record
@@ -110,7 +119,7 @@ const overdue = computed(
   () =>
     props.record?.status === 'approved' &&
     props.record?.borrow_end &&
-    props.record.borrow_end < today
+    props.record.borrow_end < today.value
 )
 
 function isReviewed(row) {
@@ -129,7 +138,7 @@ function canExtend(row) {
   return (
     row?.status === 'approved' &&
     row.extension_status !== 'pending' &&
-    row.borrow_end >= today
+    row.borrow_end >= today.value
   )
 }
 
@@ -163,7 +172,7 @@ function close() {
   >
     <template v-if="record">
       <div class="detail-hero">
-        <button class="drawer-close" type="button" @click="close">
+        <button class="drawer-close" type="button" aria-label="关闭借用详情" @click="close">
           <el-icon><Close /></el-icon>
         </button>
         <span class="detail-initial">{{ (record.category || '设').slice(0, 1) }}</span>

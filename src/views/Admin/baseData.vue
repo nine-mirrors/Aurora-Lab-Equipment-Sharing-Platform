@@ -14,28 +14,50 @@ const tabs = [
   { key: 'labs', label: '实验室场地' },
   { key: 'settings', label: '系统设置' }
 ]
+
+function handleTabKey(event, index) {
+  const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
+  if (!step) return
+  event.preventDefault()
+  const next = (index + step + tabs.length) % tabs.length
+  activeTab.value = tabs[next].key
+  document.getElementById(`base-tab-${tabs[next].key}`)?.focus()
+}
 </script>
 
 <template>
   <div class="page-shell">
     <div class="card card-pad base-card">
-      <div class="tabs">
+      <div class="tabs" role="tablist" aria-label="基础数据分类">
         <button
-          v-for="tab in tabs"
+          v-for="(tab, index) in tabs"
+          :id="`base-tab-${tab.key}`"
           :key="tab.key"
           type="button"
+          role="tab"
           class="tab-chip"
           :class="{ active: activeTab === tab.key }"
+          :aria-selected="activeTab === tab.key"
+          :aria-controls="`base-panel-${tab.key}`"
+          :tabindex="activeTab === tab.key ? 0 : -1"
           @click="activeTab = tab.key"
+          @keydown="handleTabKey($event, index)"
         >
           {{ tab.label }}
         </button>
       </div>
 
-      <AnnouncementManager v-if="activeTab === 'announcements'" />
-      <DepartmentManager v-else-if="activeTab === 'departments'" />
-      <LabManager v-else-if="activeTab === 'labs'" />
-      <SettingsManager v-else />
+      <div
+        :id="`base-panel-${activeTab}`"
+        role="tabpanel"
+        :aria-labelledby="`base-tab-${activeTab}`"
+        tabindex="0"
+      >
+        <AnnouncementManager v-if="activeTab === 'announcements'" />
+        <DepartmentManager v-else-if="activeTab === 'departments'" />
+        <LabManager v-else-if="activeTab === 'labs'" />
+        <SettingsManager v-else />
+      </div>
     </div>
   </div>
 </template>
@@ -55,7 +77,10 @@ const tabs = [
 }
 
 .tab-chip {
-  padding: 6px 14px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 16px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--bg-elevated);

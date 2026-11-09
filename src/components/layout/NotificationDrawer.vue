@@ -352,8 +352,8 @@ watch(
 }
 
 .icon-btn {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   flex: none;
   display: flex;
   align-items: center;

@@ -52,6 +52,9 @@ function toggleTheme(event) {
     type="button"
     class="theme-toggle"
     :class="{ dark: ui.isDark }"
+    role="switch"
+    :aria-checked="ui.isDark"
+    :aria-label="ui.isDark ? '深空模式已开启，点击切换到浅色模式' : '浅色模式已开启，点击切换到深空模式'"
     :title="ui.isDark ? '切换到浅色模式' : '切换到深空模式'"
     data-cursor-label="切换主题"
     @click="toggleTheme"
@@ -70,9 +73,13 @@ function toggleTheme(event) {
 
 <style scoped>
 .theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: transparent;
-  padding: 0;
+  padding: 8px;
+  margin: -8px;
   cursor: pointer;
   border-radius: 999px;
 }
