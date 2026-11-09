@@ -52,6 +52,81 @@ router.post('/bookings', requireAuth(), (req, res) => {
   ok(res, booking, '借用申请已提交，等待管理员审核')
 })
 
+function addDays(value, days) {
+  const date = new Date(`${value}T00:00:00`)
+  date.setDate(date.getDate() + days)
+  return dateKey(date)
+}
+
+function countReserved(db, deviceId, key) {
+  return db.bookings.filter(
+    item =>
+      item.device_id === deviceId &&
+      ['approved', 'returning'].includes(item.status) &&
+      item.borrow_start <= key &&
+      item.borrow_end >= key
+  ).length
+}
+
+// 借用冲突预检：提交前告诉学生所选时段每天的剩余量与可用替代时段
+router.post('/bookings/conflict-check', requireAuth(), (req, res) => {
+  const db = getDB()
+  const { device_id, borrow_start, borrow_end } = req.body || {}
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+  const device = db.devices.find(item => item.id === Number(device_id))
+  if (!device) return fail(res, '设备不存在', 404)
+  if (!DATE_RE.test(String(borrow_start || '')) || !DATE_RE.test(String(borrow_end || ''))) {
+    return fail(res, '日期格式不正确，应为 YYYY-MM-DD')
+  }
+  if (borrow_end < borrow_start) return fail(res, '归还日期不能早于借用日期')
+
+  const total = Number(device.total_qty) || 0
+  const start = new Date(`${borrow_start}T00:00:00`)
+  const last = new Date(`${borrow_end}T00:00:00`)
+  const duration = Math.round((last - start) / 86400000) + 1
+
+  const days = []
+  let minRemaining = total
+  const cursor = new Date(start)
+  while (cursor <= last) {
+    const key = dateKey(cursor)
+    const reserved = countReserved(db, device.id, key)
+    const remaining = Math.max(0, total - reserved)
+    days.push({ date: key, reserved, remaining })
+    minRemaining = Math.min(minRemaining, remaining)
+    cursor.setDate(cursor.getDate() + 1)
+  }
+
+  const suggestions = []
+  if (minRemaining <= 0) {
+    for (let offset = 1; offset <= 21 && suggestions.length < 3; offset += 1) {
+      const candidateStart = addDays(borrow_start, offset)
+      const candidateEnd = addDays(candidateStart, duration - 1)
+      let available = true
+      const probe = new Date(`${candidateStart}T00:00:00`)
+      const probeEnd = new Date(`${candidateEnd}T00:00:00`)
+      while (probe <= probeEnd) {
+        if (total - countReserved(db, device.id, dateKey(probe)) <= 0) {
+          available = false
+          break
+        }
+        probe.setDate(probe.getDate() + 1)
+      }
+      if (available) suggestions.push({ start: candidateStart, end: candidateEnd })
+    }
+  }
+
+  ok(res, {
+    total,
+    duration,
+    minRemaining,
+    conflict: minRemaining <= 0,
+    days,
+    suggestions
+  })
+})
+
 router.get('/bookings/my', requireAuth(), (req, res) => {
   const db = getDB()
   const page = Math.max(1, Number(req.query.page) || 1)

@@ -34,7 +34,7 @@ function decorate(db, device) {
 
 router.get('/devices', requireAuth(), (req, res) => {
   const db = getDB()
-  const { name, category, is_active, available } = req.query
+  const { name, category, is_active, available, sort } = req.query
   const page = Math.max(1, toInt(req.query.page) || 1)
   const pageSize = Math.min(2000, Math.max(1, toInt(req.query.pageSize) || 10))
 
@@ -64,7 +64,19 @@ router.get('/devices', requireAuth(), (req, res) => {
     )
   }
 
-  list.sort((a, b) => b.id - a.id)
+  // 排序必须发生在分页前，否则只会对当前页排序
+  if (sort === 'stock') {
+    list.sort((a, b) => Number(b.available_qty) - Number(a.available_qty) || b.id - a.id)
+  } else if (sort === 'name') {
+    list.sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh-CN') || b.id - a.id)
+  } else if (sort === 'category') {
+    list.sort(
+      (a, b) =>
+        String(a.category).localeCompare(String(b.category), 'zh-CN') || b.id - a.id
+    )
+  } else {
+    list.sort((a, b) => b.id - a.id)
+  }
 
   const total = list.length
   const start = (page - 1) * pageSize

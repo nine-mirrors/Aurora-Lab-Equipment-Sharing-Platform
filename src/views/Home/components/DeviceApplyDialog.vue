@@ -1,9 +1,9 @@
 <!-- 设备大厅：提交借用申请弹窗 -->
 <script setup>
-import { ref, watch } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { InfoFilled, MagicStick } from '@element-plus/icons-vue'
-import { applyBooking } from '@/api/student/applyDevice'
+import { applyBooking, checkBookingConflict } from '@/api/student/applyDevice'
 import { sendAiMessage } from '@/api/ai'
 import { getPublicSettings } from '@/api/settings'
 import { formatDateKey as formatDate } from '@/utils/date'
@@ -28,6 +28,10 @@ const dateRange = ref([])
 const purpose = ref('')
 const agreement = ref(false)
 const rules = ref({ maxBorrowDays: 90, advanceDays: 30 })
+const conflict = ref(null)
+const checking = ref(false)
+let checkTimer = null
+let checkSeq = 0
 
 function todayKey() {
   return formatDate(new Date())
@@ -60,6 +64,51 @@ async function loadRules() {
   }
 }
 
+async function runConflictCheck() {
+  if (!props.device?.id || !dateRange.value || dateRange.value.length !== 2) {
+    conflict.value = null
+    return
+  }
+  const seq = ++checkSeq
+  checking.value = true
+  try {
+    const res = await checkBookingConflict({
+      device_id: props.device.id,
+      borrow_start: dateRange.value[0],
+      borrow_end: dateRange.value[1]
+    })
+    if (seq !== checkSeq) return
+    conflict.value = res.code === 200 ? res.data : null
+  } catch {
+    if (seq !== checkSeq) return
+    // 预检失败不阻断提交，后端创建时仍会做最终校验
+    conflict.value = null
+  } finally {
+    if (seq === checkSeq) checking.value = false
+  }
+}
+
+function scheduleConflictCheck() {
+  if (checkTimer) clearTimeout(checkTimer)
+  if (!dateRange.value || dateRange.value.length !== 2) {
+    conflict.value = null
+    checking.value = false
+    return
+  }
+  checking.value = true
+  checkTimer = setTimeout(runConflictCheck, 280)
+}
+
+function applySuggestion(item) {
+  dateRange.value = [item.start, item.end]
+}
+
+onBeforeUnmount(() => {
+  if (checkTimer) clearTimeout(checkTimer)
+})
+
+watch(dateRange, scheduleConflictCheck, { deep: true })
+
 function close() {
   emit('update:modelValue', false)
 }
@@ -73,7 +122,10 @@ watch(
     dateRange.value = [start, addDays(start, 3)]
     purpose.value = ''
     agreement.value = false
+    conflict.value = null
+    checkSeq += 1
     loadRules()
+    scheduleConflictCheck()
   }
 )
 
@@ -133,8 +185,17 @@ function showAgreement() {
 }
 
 async function submit() {
+  if (submitting.value) return
   if (!dateRange.value || dateRange.value.length !== 2) {
     ElMessage.warning('请选择借用起止日期')
+    return
+  }
+  if (checking.value) {
+    ElMessage.info('正在检查时段库存，请稍候')
+    return
+  }
+  if (conflict.value?.conflict) {
+    ElMessage.warning('所选时段已被约满，请参考下方推荐时段')
     return
   }
 
@@ -219,6 +280,31 @@ async function submit() {
         <p class="rule-hint">
           最长借用 {{ rules.maxBorrowDays }} 天，最多提前 {{ rules.advanceDays }} 天预约
         </p>
+
+        <p v-if="checking" class="conflict-line is-checking" role="status">
+          正在检查所选时段的库存…
+        </p>
+        <div v-else-if="conflict?.conflict" class="conflict-box" role="alert">
+          <strong>所选时段已约满</strong>
+          <p>
+            {{ conflict.days.filter(item => item.remaining <= 0).slice(0, 3).map(item => item.date).join('、') }}
+            已无可用库存
+          </p>
+          <div v-if="conflict.suggestions.length" class="suggest-list">
+            <span>推荐改期</span>
+            <button
+              v-for="item in conflict.suggestions"
+              :key="item.start"
+              type="button"
+              @click="applySuggestion(item)"
+            >
+              {{ item.start.slice(5).replace('-', '.') }} → {{ item.end.slice(5).replace('-', '.') }}
+            </button>
+          </div>
+        </div>
+        <p v-else-if="conflict && conflict.minRemaining > 0" class="conflict-line is-ok" role="status">
+          时段可用，所选日期内最少剩余 {{ conflict.minRemaining }} 台
+        </p>
       </el-form-item>
 
       <el-form-item>
@@ -256,7 +342,14 @@ async function submit() {
 
     <template #footer>
       <el-button @click="close">取消</el-button>
-      <el-button type="primary" :loading="submitting" @click="submit">确认提交</el-button>
+      <el-button
+        type="primary"
+        :loading="submitting"
+        :disabled="checking || Boolean(conflict?.conflict)"
+        @click="submit"
+      >
+        确认提交
+      </el-button>
     </template>
   </el-dialog>
 </template>
@@ -385,5 +478,92 @@ async function submit() {
   margin: 6px 0 0;
   font-size: 10.5px;
   color: var(--text-3);
+}
+
+.conflict-line {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.conflict-line::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.conflict-line.is-checking {
+  color: var(--text-3);
+}
+
+.conflict-line.is-checking::before {
+  animation: conflict-pulse 1s ease-in-out infinite;
+}
+
+.conflict-line.is-ok {
+  color: var(--green);
+}
+
+.conflict-box {
+  margin-top: 9px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: var(--red-soft);
+  border: 1px solid color-mix(in srgb, var(--red) 24%, transparent);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+
+.conflict-box strong {
+  display: block;
+  color: var(--red);
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.conflict-box p {
+  margin: 0;
+}
+
+.suggest-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.suggest-list span {
+  color: var(--text-3);
+  font-size: 10.5px;
+}
+
+.suggest-list button {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.suggest-list button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+@keyframes conflict-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
 }
 </style>

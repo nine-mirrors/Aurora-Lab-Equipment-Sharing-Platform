@@ -12,20 +12,71 @@ import { useUiStore } from '@/stores/Ui'
 import { getCategoryStats, getOverview, getTrend, getUtilization } from '@/api/stats'
 import { getMyBookings } from '@/api/student/bookings'
 import { getDeviceList } from '@/api/device'
+import { getAnnouncements } from '@/api/workspace'
 import { formatShortDate as formatDate } from '@/utils/date'
-import { ArrowRight, Bell, Box, Clock, Document, TrendCharts } from '@element-plus/icons-vue'
+import {
+  AlarmClock,
+  ArrowRight,
+  Bell,
+  Box,
+  Clock,
+  Document,
+  TrendCharts,
+  WarningFilled
+} from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 const ui = useUiStore()
 
 const loading = ref(true)
+const loadError = ref('')
 const overview = ref({})
 const trend = ref([])
 const categories = ref([])
 const utilization = ref([])
-const myBookings = ref([])
+const allBookings = ref([])
+const announcements = ref([])
 const recommended = ref([])
+
+const recentBookings = computed(() => allBookings.value.slice(0, 5))
+const hasCategoryData = computed(() =>
+  categories.value.some(item => Number(item.total) > 0)
+)
+
+const DUE_WINDOW_DAYS = 3
+const notifyEnabled = ref(localStorage.getItem('lab_notify_enabled') !== '0')
+
+function todayKey() {
+  const date = new Date()
+  const pad = num => String(num).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+function dayGap(target) {
+  if (!target) return null
+  const end = new Date(`${target}T00:00:00`)
+  const start = new Date(`${todayKey()}T00:00:00`)
+  if (Number.isNaN(end.getTime())) return null
+  return Math.round((end - start) / 86400000)
+}
+
+const dueReminders = computed(() => {
+  if (!notifyEnabled.value) return []
+  return allBookings.value
+    .filter(item => item.status === 'approved' && item.borrow_end)
+    .map(item => ({ ...item, daysLeft: dayGap(item.borrow_end) }))
+    .filter(item => item.daysLeft !== null && item.daysLeft <= DUE_WINDOW_DAYS)
+    .sort((a, b) => a.daysLeft - b.daysLeft)
+    .slice(0, 3)
+})
+
+function dueLabel(item) {
+  if (item.daysLeft < 0) return `已逾期 ${Math.abs(item.daysLeft)} 天`
+  if (item.daysLeft === 0) return '今天到期'
+  if (item.daysLeft === 1) return '明天到期'
+  return `${item.daysLeft} 天后到期`
+}
 
 const displayName = computed(
   () => userStore.userInfo?.name || userStore.userInfo?.account || '同学'
@@ -53,32 +104,35 @@ const ringDeg = computed(() => Math.min(360, (rate.value / 100) * 360))
 const sparkApplications = computed(() => trend.value.slice(-10).map(item => item.applications))
 const sparkApprovals = computed(() => trend.value.slice(-10).map(item => item.approvals))
 
-const notices = [
-  {
-    id: 1,
-    day: '23',
-    month: '10月',
-    tag: '规则',
-    title: '设备借用周期调整',
-    text: '单次借用最长 14 天，逾期将影响个人信用分。'
-  },
-  {
-    id: 2,
-    day: '21',
-    month: '10月',
-    tag: '通知',
-    title: 'A 栋实验室周末开放时间',
-    text: '周末开放时间调整为 09:00 - 17:30，请合理安排实验。'
-  },
-  {
-    id: 3,
-    day: '18',
-    month: '10月',
-    tag: '上新',
-    title: '新增 6 台国产示波器',
-    text: '电子测量分类新增设备，现已开放预约。'
-  }
-]
+const LEVEL_TAG = { important: '重要', warning: '提醒', info: '公告' }
+
+const notices = computed(() =>
+  announcements.value.slice(0, 3).map(item => {
+    const date = new Date(item.published_at)
+    const valid = !Number.isNaN(date.getTime())
+    return {
+      id: item.id,
+      day: valid ? String(date.getDate()).padStart(2, '0') : '--',
+      month: valid ? `${date.getMonth() + 1}月` : '',
+      tag: LEVEL_TAG[item.level] || '公告',
+      title: item.title,
+      text: item.content
+    }
+  })
+)
+
+const chartTheme = computed(() => ({
+  text: ui.isDark ? '#9db3a4' : '#7e9487',
+  axis: ui.isDark ? 'rgba(157,179,164,0.22)' : '#dfe8d8',
+  split: ui.isDark ? 'rgba(157,179,164,0.1)' : 'rgba(126,148,135,0.14)',
+  pieBorder: ui.isDark ? '#0d1a14' : '#ffffff',
+  primary: ui.isDark ? '#5fd0b2' : '#0e7c66',
+  accent: ui.isDark ? '#c2dd63' : '#9fbf3a',
+  ghost: ui.isDark ? 'rgba(157,179,164,0.22)' : 'rgba(126,148,135,0.18)',
+  palette: ui.isDark
+    ? ['#5fd0b2', '#c2dd63', '#e0b25c', '#d98f66', '#57c4b4', '#a99bf0', '#63b8d4']
+    : ['#0e7c66', '#8fae2f', '#c98a26', '#b86a45', '#2f9e8f', '#7d6bc4', '#2f8fb0']
+}))
 
 const trendOption = computed(() => ({
   tooltip: {
@@ -96,21 +150,21 @@ const trendOption = computed(() => ({
     itemWidth: 8,
     itemHeight: 8,
     itemGap: 16,
-    textStyle: { color: '#7e9487', fontSize: 11.5 }
+    textStyle: { color: chartTheme.value.text, fontSize: 11.5 }
   },
   grid: { left: 2, right: 8, top: 38, bottom: 2, containLabel: true },
   xAxis: {
     type: 'category',
     boundaryGap: false,
     data: trend.value.map(item => item.date),
-    axisLine: { lineStyle: { color: '#dfe8d8' } },
+    axisLine: { lineStyle: { color: chartTheme.value.axis } },
     axisTick: { show: false },
-    axisLabel: { color: '#7e9487', fontSize: 10.5, interval: 4 }
+    axisLabel: { color: chartTheme.value.text, fontSize: 10.5, interval: 4 }
   },
   yAxis: {
     type: 'value',
-    splitLine: { lineStyle: { color: 'rgba(126,148,135,0.14)' } },
-    axisLabel: { color: '#7e9487', fontSize: 10.5 }
+    splitLine: { lineStyle: { color: chartTheme.value.split } },
+    axisLabel: { color: chartTheme.value.text, fontSize: 10.5 }
   },
   series: [
     {
@@ -122,8 +176,14 @@ const trendOption = computed(() => ({
       symbolSize: 5,
       showSymbol: false,
       data: trend.value.map(item => item.applications),
-      lineStyle: { width: 2.6, color: '#0e7c66', shadowColor: 'rgba(14,124,102,0.35)', shadowBlur: 12, shadowOffsetY: 6 },
-      itemStyle: { color: '#0e7c66' },
+      lineStyle: {
+        width: 2.6,
+        color: chartTheme.value.primary,
+        shadowColor: ui.isDark ? 'rgba(95,208,178,0.28)' : 'rgba(14,124,102,0.35)',
+        shadowBlur: 12,
+        shadowOffsetY: 6
+      },
+      itemStyle: { color: chartTheme.value.primary },
       areaStyle: {
         color: {
           type: 'linear',
@@ -132,8 +192,14 @@ const trendOption = computed(() => ({
           x2: 0,
           y2: 1,
           colorStops: [
-            { offset: 0, color: 'rgba(14,124,102,0.24)' },
-            { offset: 1, color: 'rgba(14,124,102,0.01)' }
+            {
+              offset: 0,
+              color: ui.isDark ? 'rgba(95,208,178,0.26)' : 'rgba(14,124,102,0.24)'
+            },
+            {
+              offset: 1,
+              color: ui.isDark ? 'rgba(95,208,178,0.01)' : 'rgba(14,124,102,0.01)'
+            }
           ]
         }
       }
@@ -145,8 +211,8 @@ const trendOption = computed(() => ({
       smoothMonotone: 'x',
       showSymbol: false,
       data: trend.value.map(item => item.approvals),
-      lineStyle: { width: 2.2, color: '#9fbf3a' },
-      itemStyle: { color: '#9fbf3a' },
+      lineStyle: { width: 2.2, color: chartTheme.value.accent },
+      itemStyle: { color: chartTheme.value.accent },
       areaStyle: {
         color: {
           type: 'linear',
@@ -155,8 +221,14 @@ const trendOption = computed(() => ({
           x2: 0,
           y2: 1,
           colorStops: [
-            { offset: 0, color: 'rgba(159,191,58,0.18)' },
-            { offset: 1, color: 'rgba(159,191,58,0.01)' }
+            {
+              offset: 0,
+              color: ui.isDark ? 'rgba(194,221,99,0.2)' : 'rgba(159,191,58,0.18)'
+            },
+            {
+              offset: 1,
+              color: ui.isDark ? 'rgba(194,221,99,0.01)' : 'rgba(159,191,58,0.01)'
+            }
           ]
         }
       }
@@ -174,7 +246,7 @@ const categoryOption = computed(() => {
   }
 
   return {
-    color: ['#0e7c66', '#9fbf3a', '#c98a26', '#b86a45', '#2f9e8f', '#7e9487', '#c2dd63'],
+    color: chartTheme.value.palette,
     tooltip: {
       trigger: 'item',
       formatter: '{b}<br/>{c} 台（{d}%）',
@@ -190,7 +262,7 @@ const categoryOption = computed(() => {
       itemWidth: 8,
       itemHeight: 8,
       itemGap: 11,
-      textStyle: { color: '#7e9487', fontSize: 11.5 }
+      textStyle: { color: chartTheme.value.text, fontSize: 11.5 }
     },
     series: [
       {
@@ -199,7 +271,7 @@ const categoryOption = computed(() => {
         center: ['34%', '52%'],
         avoidLabelOverlap: true,
         padAngle: 2,
-        itemStyle: { borderRadius: 6, borderColor: ui.isDark ? '#0d1a14' : '#ffffff', borderWidth: 2 },
+        itemStyle: { borderRadius: 6, borderColor: chartTheme.value.pieBorder, borderWidth: 2 },
         label: { show: false },
         emphasis: {
           scaleSize: 6,
@@ -207,7 +279,7 @@ const categoryOption = computed(() => {
             show: true,
             fontSize: 14,
             fontWeight: 600,
-            color: '#0e7c66',
+            color: chartTheme.value.primary,
             formatter: '{b}\n{c} 台'
           }
         },
@@ -236,15 +308,15 @@ const utilizationOption = computed(() => {
     xAxis: {
       type: 'value',
       max: 100,
-      splitLine: { lineStyle: { color: 'rgba(126,148,135,0.14)' } },
-      axisLabel: { color: '#7e9487', fontSize: 10.5, formatter: '{value}%' }
+      splitLine: { lineStyle: { color: chartTheme.value.split } },
+      axisLabel: { color: chartTheme.value.text, fontSize: 10.5, formatter: '{value}%' }
     },
     yAxis: {
       type: 'category',
       data: list.map(item => (item.name.length > 8 ? `${item.name.slice(0, 8)}…` : item.name)),
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: '#7e9487', fontSize: 11.5 }
+      axisLabel: { color: chartTheme.value.text, fontSize: 11.5 }
     },
     series: [
       {
@@ -260,12 +332,21 @@ const utilizationOption = computed(() => {
             x2: 1,
             y2: 0,
             colorStops: [
-              { offset: 0, color: 'rgba(14,124,102,0.4)' },
-              { offset: 1, color: '#0e7c66' }
+              {
+                offset: 0,
+                color: ui.isDark ? 'rgba(95,208,178,0.35)' : 'rgba(14,124,102,0.4)'
+              },
+              { offset: 1, color: chartTheme.value.primary }
             ]
           }
         },
-        label: { show: true, position: 'right', color: '#7e9487', fontSize: 10.5, formatter: '{c}%' }
+        label: {
+          show: true,
+          position: 'right',
+          color: chartTheme.value.text,
+          fontSize: 10.5,
+          formatter: '{c}%'
+        }
       }
     ]
   }
@@ -277,28 +358,37 @@ function openDevice(keyword) {
 
 async function loadData() {
   loading.value = true
-  try {
-    const [overviewRes, trendRes, categoryRes, utilizationRes, myRes, recommendRes] =
-      await Promise.all([
-        getOverview(),
-        getTrend(30),
-        getCategoryStats(),
-        getUtilization(),
-        getMyBookings({ page: 1, pageSize: 5 }),
-        getDeviceList({ available: 1, is_active: 1, page: 1, pageSize: 3 })
-      ])
+  loadError.value = ''
 
-    overview.value = overviewRes.data || {}
-    trend.value = trendRes.data || []
-    categories.value = categoryRes.data || []
-    utilization.value = utilizationRes.data || []
-    myBookings.value = myRes.data?.list || []
-    recommended.value = recommendRes.data?.list || []
-  } catch (error) {
-    console.error('看板数据加载失败', error)
-  } finally {
-    loading.value = false
+  const results = await Promise.allSettled([
+    getOverview(),
+    getTrend(30),
+    getCategoryStats(),
+    getUtilization(),
+    getMyBookings({ page: 1, pageSize: 50 }),
+    getDeviceList({ available: 1, is_active: 1, page: 1, pageSize: 3 }),
+    getAnnouncements()
+  ])
+
+  const pick = (result, fallback) =>
+    result.status === 'fulfilled' && result.value ? result.value.data ?? fallback : fallback
+
+  overview.value = pick(results[0], {}) || {}
+  trend.value = pick(results[1], []) || []
+  categories.value = pick(results[2], []) || []
+  utilization.value = pick(results[3], []) || []
+  allBookings.value = pick(results[4], {})?.list || []
+  recommended.value = pick(results[5], {})?.list || []
+  announcements.value = pick(results[6], {})?.list || []
+
+  const failed = results.filter(item => item.status === 'rejected').length
+  if (failed === results.length) {
+    loadError.value = '看板数据加载失败，请检查网络后重试'
+  } else if (failed > 0) {
+    loadError.value = '部分数据加载失败，当前内容可能不完整'
   }
+
+  loading.value = false
 }
 
 onMounted(loadData)
@@ -362,6 +452,41 @@ onMounted(loadData)
       </div>
     </section>
 
+    <!-- 数据错误提示 -->
+    <div v-if="loadError && !loading" class="load-error-bar" role="alert">
+      <el-icon><WarningFilled /></el-icon>
+      <span>{{ loadError }}</span>
+      <button type="button" class="retry-btn" @click="loadData">重新加载</button>
+    </div>
+
+    <!-- 到期归还提醒 -->
+    <section v-if="!loading && dueReminders.length" class="due-card fade-up" aria-label="归还提醒">
+      <div class="due-head">
+        <span class="due-icon"><el-icon><AlarmClock /></el-icon></span>
+        <div class="due-copy">
+          <strong>归还提醒</strong>
+          <p>以下设备即将到期或已逾期，请及时归还或申请续借。</p>
+        </div>
+        <router-link to="/applyRecord" class="due-more">
+          查看全部
+          <el-icon><ArrowRight /></el-icon>
+        </router-link>
+      </div>
+      <ul class="due-list">
+        <li v-for="item in dueReminders" :key="item.id" class="due-item">
+          <span class="due-dot" :class="{ 'is-overdue': item.daysLeft < 0 }"></span>
+          <div class="due-main">
+            <strong>{{ item.device_name }}</strong>
+            <span>{{ item.borrow_end }} 到期</span>
+          </div>
+          <span class="due-badge" :class="{ 'is-overdue': item.daysLeft < 0 }">
+            {{ dueLabel(item) }}
+          </span>
+          <router-link to="/applyRecord" class="due-action">去归还</router-link>
+        </li>
+      </ul>
+    </section>
+
     <!-- 指标卡 -->
     <section class="stat-grid stagger">
       <template v-if="loading">
@@ -422,7 +547,13 @@ onMounted(loadData)
           <span class="muted small">申请量与审批量</span>
         </div>
         <AppSkeleton v-if="loading" type="chart" height="270px" />
-        <BaseChart v-else :option="trendOption" height="270px" />
+        <BaseChart v-else-if="trend.length" :option="trendOption" height="270px" />
+        <EmptyState
+          v-else
+          compact
+          title="暂无趋势数据"
+          description="产生借用申请后，这里会展示近 30 天的变化"
+        />
       </div>
 
       <div class="card card-pad">
@@ -430,7 +561,13 @@ onMounted(loadData)
           <h3>设备分类分布<span class="sub">按库存台数</span></h3>
         </div>
         <AppSkeleton v-if="loading" type="chart" height="270px" />
-        <BaseChart v-else :option="categoryOption" height="270px" />
+        <BaseChart v-else-if="hasCategoryData" :option="categoryOption" height="270px" />
+        <EmptyState
+          v-else
+          compact
+          title="暂无分类数据"
+          description="设备入库后会自动统计各分类占比"
+        />
       </div>
     </section>
 
@@ -441,7 +578,13 @@ onMounted(loadData)
           <span class="muted small">Top 6</span>
         </div>
         <AppSkeleton v-if="loading" type="chart" height="260px" />
-        <BaseChart v-else :option="utilizationOption" height="260px" />
+        <BaseChart v-else-if="utilization.length" :option="utilizationOption" height="260px" />
+        <EmptyState
+          v-else
+          compact
+          title="暂无利用率数据"
+          description="设备被借出后，这里会展示借出占比排名"
+        />
       </div>
 
       <div class="card card-pad">
@@ -457,12 +600,17 @@ onMounted(loadData)
           <AppSkeleton type="list" :rows="4" />
         </div>
 
-        <TransitionGroup v-else-if="myBookings.length" name="list" tag="div" class="recent-list">
+        <TransitionGroup v-else-if="recentBookings.length" name="list" tag="div" class="recent-list">
           <div
-            v-for="item in myBookings"
+            v-for="item in recentBookings"
             :key="item.id"
             class="recent-item"
+            role="button"
+            tabindex="0"
+            :aria-label="`查看 ${item.device_name} 的借用记录`"
             @click="router.push('/applyRecord')"
+            @keydown.enter.prevent="router.push('/applyRecord')"
+            @keydown.space.prevent="router.push('/applyRecord')"
           >
             <span class="recent-mark"></span>
             <div class="recent-main">
@@ -497,7 +645,11 @@ onMounted(loadData)
           </button>
         </div>
 
-        <div class="notice-list">
+        <div v-if="loading" class="list-skeleton">
+          <AppSkeleton type="list" :rows="3" />
+        </div>
+
+        <div v-else-if="notices.length" class="notice-list">
           <article v-for="item in notices" :key="item.id" class="notice-item">
             <div class="notice-date">
               <b>{{ item.day }}</b>
@@ -512,6 +664,13 @@ onMounted(loadData)
             </div>
           </article>
         </div>
+
+        <EmptyState
+          v-else
+          compact
+          title="暂无公告"
+          description="管理员发布公告后会显示在这里"
+        />
       </div>
 
       <div class="card card-pad">

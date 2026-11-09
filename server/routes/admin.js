@@ -292,13 +292,98 @@ router.patch('/admin/bookings/:id/extension', requireAuth(['admin']), (req, res)
   fail(res, '未知的续借审核动作')
 })
 
+router.get('/admin/users/stats', requireAuth(['admin']), (req, res) => {
+  const db = getDB()
+  const total = db.users.length
+  const bound = db.users.filter(item => item.email).length
+
+  ok(res, {
+    total,
+    students: db.users.filter(item => item.role === 'student').length,
+    admins: db.users.filter(item => item.role === 'admin').length,
+    blacklisted: db.users.filter(item => item.blacklisted).length,
+    health: total ? Math.round((bound / total) * 100) : 0
+  })
+})
+
+// 设备使用率热力图：近 N 周内每天的设备占用比例（按周一对齐）
+router.get('/admin/usage-heatmap', requireAuth(['admin']), (req, res) => {
+  const weeks = Math.min(26, Math.max(4, Number(req.query.weeks) || 12))
+  const db = getDB()
+  const devices = db.devices || []
+  const totalDevices = devices.reduce((sum, item) => sum + (Number(item.total_qty) || 0), 0)
+  const activeBookings = (db.bookings || []).filter(
+    item =>
+      ['approved', 'returning', 'returned'].includes(item.status) &&
+      item.borrow_start &&
+      item.borrow_end
+  )
+
+  const pad = num => String(num).padStart(2, '0')
+  const keyOf = date => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const start = new Date(today)
+  start.setDate(start.getDate() - (weeks * 7 - 1))
+  // 对齐到周一，保证热力图每列都是一整周
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7))
+
+  const cells = []
+  let max = 0
+  let borrowedSum = 0
+  let rateMax = 0
+  let rateSum = 0
+  let counted = 0
+
+  for (let cursor = new Date(start); cursor <= today; cursor.setDate(cursor.getDate() + 1)) {
+    const key = keyOf(cursor)
+    const borrowed = new Set(
+      activeBookings
+        .filter(item => item.borrow_start <= key && item.borrow_end >= key)
+        .map(item => item.device_id)
+    ).size
+    const rate = totalDevices ? Math.round((borrowed / totalDevices) * 100) : 0
+
+    max = Math.max(max, borrowed)
+    rateMax = Math.max(rateMax, rate)
+    borrowedSum += borrowed
+    rateSum += rate
+    counted += 1
+    cells.push({ date: key, weekday: (cursor.getDay() + 6) % 7, rate, borrowed })
+  }
+
+  ok(res, {
+    weeks,
+    start: keyOf(start),
+    end: keyOf(today),
+    totalDevices,
+    max,
+    avg: counted ? Math.round((borrowedSum / counted) * 10) / 10 : 0,
+    rateMax,
+    rateAvg: counted ? Math.round(rateSum / counted) : 0,
+    cells
+  })
+})
+
 router.get('/admin/users', requireAuth(['admin']), (req, res) => {
   const db = getDB()
   const keyword = String(req.query.keyword || '').trim().toLowerCase()
+  const role = String(req.query.role || '')
+  const blacklisted = String(req.query.blacklisted || '')
   const page = Math.max(1, Number(req.query.page) || 1)
   const pageSize = Math.min(2000, Math.max(1, Number(req.query.pageSize) || 10))
 
   let list = db.users
+
+  if (role === 'student' || role === 'admin') {
+    list = list.filter(user => user.role === role)
+  }
+
+  if (blacklisted === '1') {
+    list = list.filter(user => Boolean(user.blacklisted))
+  }
 
   if (keyword) {
     list = list.filter(

@@ -234,6 +234,206 @@
   margin-left: 2px;
 }
 
+/* ---------- 错误提示 ---------- */
+.load-error-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--red) 26%, var(--border));
+  background: var(--red-soft);
+  color: var(--text-1);
+  font-size: 12.5px;
+}
+
+.load-error-bar .el-icon {
+  flex: none;
+  font-size: 15px;
+  color: var(--red);
+}
+
+.load-error-bar span {
+  flex: 1;
+  min-width: 0;
+}
+
+.retry-btn {
+  flex: none;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-1);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.retry-btn:hover {
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  color: var(--primary);
+}
+
+/* ---------- 归还提醒 ---------- */
+.due-card {
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--amber) 32%, var(--border));
+  background:
+    radial-gradient(420px 160px at 100% 0%, color-mix(in srgb, var(--amber) 12%, transparent), transparent 70%),
+    linear-gradient(135deg, color-mix(in srgb, var(--amber) 6%, var(--bg-elevated)), var(--bg-elevated));
+  box-shadow: var(--shadow-sm);
+}
+
+.due-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.due-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  font-size: 17px;
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 16%, transparent);
+}
+
+.due-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.due-copy strong {
+  display: block;
+  font-size: 13.5px;
+  color: var(--text-1);
+}
+
+.due-copy p {
+  margin: 1px 0 0;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.due-more {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 40px;
+  font-size: 12.5px;
+  color: var(--primary);
+}
+
+.due-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.due-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+  background: color-mix(in srgb, var(--bg-elevated) 72%, transparent);
+}
+
+.due-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--amber);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--amber) 16%, transparent);
+}
+
+.due-dot.is-overdue {
+  background: var(--red);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--red) 16%, transparent);
+}
+
+.due-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+}
+
+.due-main strong {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.due-main span {
+  font-size: 10.5px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.due-badge {
+  flex: none;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 14%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.due-badge.is-overdue {
+  color: var(--red);
+  background: var(--red-soft);
+}
+
+.due-action {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 13px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.due-action:hover {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+@media (max-width: 560px) {
+  .due-item {
+    flex-wrap: wrap;
+  }
+
+  .due-main {
+    flex-basis: calc(100% - 60px);
+  }
+}
+
 /* ---------- 列表 ---------- */
 .list-skeleton {
   padding: 6px 0;

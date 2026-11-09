@@ -223,6 +223,20 @@ async function main() {
     assert(recent.data.code === 200 && recent.data.data.length > 0, '管理员读取最近申请失败')
   })
 
+  await step('设备使用率热力图仅管理员可用且数据完整', async () => {
+    const denied = await request('GET', '/api/admin/usage-heatmap?weeks=12', { token: studentToken })
+    assert(denied.status === 403, '学生不应读取管理端热力图')
+
+    const res = await request('GET', '/api/admin/usage-heatmap?weeks=12', { token: adminToken })
+    const data = res.data.data
+    assert(res.data.code === 200, '管理员读取热力图失败')
+    assert(Array.isArray(data.cells) && data.cells.length >= 84, '热力图天数不足 12 周')
+    assert(new Date(`${data.cells[0].date}T00:00:00`).getDay() === 1, '热力图应自周一对齐')
+    assert(data.cells.every(item => item.rate >= 0 && item.rate <= 100), '使用率超出 0-100 范围')
+    assert(data.max >= data.avg, '峰值不应小于均值')
+    assert(data.totalDevices > 0, '库存统计为空')
+  })
+
   await step('设备列表分页与筛选正常', async () => {
     const page1 = await request('GET', '/api/devices?page=1&pageSize=5', { token: studentToken })
     const page2 = await request('GET', '/api/devices?page=2&pageSize=5', { token: studentToken })

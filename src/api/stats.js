@@ -41,3 +41,12 @@ export const getRecentBookings = (limit = 8) => {
     params: { limit }
   })
 }
+
+// 设备使用率热力图（管理端）
+export const getUsageHeatmap = (weeks = 12) => {
+  return request({
+    url: '/api/admin/usage-heatmap',
+    method: 'get',
+    params: { weeks }
+  })
+}

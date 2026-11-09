@@ -9,6 +9,15 @@ export const applyBooking = (data) => {
   })
 }
 
+// 借用冲突预检：所选时段每日剩余量 + 可替代时段
+export const checkBookingConflict = (data) => {
+  return request({
+    url: '/api/bookings/conflict-check',
+    method: 'post',
+    data
+  })
+}
+
 // 获取某个设备的借用记录/详情（用于读取拒绝原因）
 export const getBookingDetail = (id) => {
   return request({

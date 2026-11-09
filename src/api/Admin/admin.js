@@ -109,6 +109,14 @@ export const getUserList = (params) => {
   })
 }
 
+// 用户统计（全量口径，不受分页影响）
+export const getUserStats = () => {
+  return request({
+    url: '/api/admin/users/stats',
+    method: 'get'
+  })
+}
+
 // 加入 / 解除黑名单
 export const blacklistUser = (id, data) => {
   return request({
