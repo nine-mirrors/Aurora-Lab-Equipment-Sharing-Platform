@@ -26,9 +26,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // 本地自研后端
+      // 本地自研后端（端口被占用时可用 LAB_API_TARGET 覆盖）
       '/api': {
-        target: 'http://localhost:3000',
+        target: process.env.LAB_API_TARGET || 'http://localhost:3000',
         changeOrigin: true
       }
     }

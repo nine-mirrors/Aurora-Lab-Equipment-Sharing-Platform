@@ -1,14 +1,16 @@
 <!-- 管理端系统数据：数据表规模与审计日志 -->
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { getAuditLogs, getDatabaseStats } from '@/api/workspace'
+import { useDebounce } from '@/composables/useDebounce'
 import AppSkeleton from '@/components/common/AppSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 
 const loading = ref(true)
 const dbLoading = ref(true)
+const dbError = ref('')
+const logError = ref('')
 const db = ref({ schemaVersion: 0, tables: [], total: 0 })
 const logs = ref([])
 const total = ref(0)
@@ -16,6 +18,9 @@ const page = ref(1)
 const pageSize = 12
 const keyword = ref('')
 const action = ref('all')
+let requestSeq = 0
+
+const hasFilter = computed(() => Boolean(keyword.value.trim()) || action.value !== 'all')
 
 const actions = [
   { key: 'all', label: '全部操作' },
@@ -66,18 +71,25 @@ function actionLabel(value) {
 
 async function loadDb() {
   dbLoading.value = true
+  dbError.value = ''
   try {
     const res = await getDatabaseStats()
-    if (res.code === 200) db.value = res.data
-  } catch {
-    ElMessage.error('数据表信息加载失败')
+    if (res.code === 200) {
+      db.value = res.data
+    } else {
+      dbError.value = res.message || '数据表信息加载失败'
+    }
+  } catch (error) {
+    dbError.value = error?.response?.data?.message || '数据表信息加载失败'
   } finally {
     dbLoading.value = false
   }
 }
 
 async function loadLogs() {
+  const seq = ++requestSeq
   loading.value = true
+  logError.value = ''
   try {
     const res = await getAuditLogs({
       page: page.value,
@@ -85,14 +97,23 @@ async function loadLogs() {
       keyword: keyword.value.trim() || undefined,
       action: action.value
     })
+    if (seq !== requestSeq) return
+
     logs.value = res.data?.list || []
     total.value = res.data?.total || 0
-  } catch {
-    ElMessage.error('审计日志加载失败')
+
+    // 删除/筛选后当前页可能越界，自动回到最后一页
+    if (!logs.value.length && page.value > 1) {
+      page.value = Math.max(1, Math.ceil(total.value / pageSize))
+      loadLogs()
+    }
+  } catch (error) {
+    if (seq !== requestSeq) return
     logs.value = []
     total.value = 0
+    logError.value = error?.response?.data?.message || '审计日志加载失败'
   } finally {
-    loading.value = false
+    if (seq === requestSeq) loading.value = false
   }
 }
 
@@ -100,6 +121,8 @@ function search() {
   page.value = 1
   loadLogs()
 }
+
+const debouncedSearch = useDebounce(search, 320)
 
 function reset() {
   keyword.value = ''
@@ -151,7 +174,17 @@ onMounted(() => {
 
       <AppSkeleton v-if="dbLoading" type="list" :rows="4" />
 
-      <div v-else class="table-grid">
+      <EmptyState
+        v-else-if="dbError"
+        tone="error"
+        compact
+        title="数据表信息加载失败"
+        :description="dbError"
+        action-text="重新加载"
+        @action="loadDb"
+      />
+
+      <div v-else-if="db.tables.length" class="table-grid">
         <div v-for="table in db.tables" :key="table.key" class="table-item">
           <div class="table-copy">
             <strong>{{ table.label }}</strong>
@@ -163,6 +196,8 @@ onMounted(() => {
           </div>
         </div>
       </div>
+
+      <EmptyState v-else compact title="暂无数据表信息" description="初始化数据库后会自动统计各集合规模" />
     </div>
 
     <div class="filter-bar">
@@ -170,12 +205,20 @@ onMounted(() => {
         v-model="keyword"
         class="search-input"
         placeholder="搜索操作人、对象或详情"
+        aria-label="搜索审计日志"
         clearable
         :prefix-icon="Search"
+        @input="debouncedSearch"
         @keyup.enter="search"
         @clear="search"
       />
-      <el-select v-model="action" placeholder="全部操作" class="select" @change="search">
+      <el-select
+        v-model="action"
+        placeholder="全部操作"
+        aria-label="按操作类型筛选"
+        class="select"
+        @change="search"
+      >
         <el-option v-for="item in actions" :key="item.key" :label="item.label" :value="item.key" />
       </el-select>
       <div class="filter-actions">
@@ -189,6 +232,15 @@ onMounted(() => {
       </div>
 
       <AppSkeleton v-if="loading" type="table" :rows="6" />
+
+      <EmptyState
+        v-else-if="logError"
+        tone="error"
+        title="审计日志加载失败"
+        :description="logError"
+        action-text="重新加载"
+        @action="loadLogs"
+      />
 
       <template v-else-if="logs.length">
         <el-table :data="logs">
@@ -228,11 +280,20 @@ onMounted(() => {
           v-model:current-page="page"
           background
           layout="prev, pager, next"
+          :pager-count="5"
           :page-size="pageSize"
           :total="total"
           @current-change="changePage"
         />
       </template>
+
+      <EmptyState
+        v-else-if="hasFilter"
+        title="没有匹配的审计记录"
+        description="换个关键词，或清空筛选条件后再试"
+        action-text="清空筛选"
+        @action="reset"
+      />
 
       <EmptyState
         v-else
