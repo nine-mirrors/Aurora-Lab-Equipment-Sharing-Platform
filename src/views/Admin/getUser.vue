@@ -1,20 +1,25 @@
 <!-- 管理端用户管理 -->
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
-import { blacklistUser, deleteUserByAdmin, getUserList } from '@/api/Admin/admin'
+import { blacklistUser, deleteUserByAdmin, getUserList, getUserStats } from '@/api/Admin/admin'
 import AppSkeleton from '@/components/common/AppSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import { usePagination } from '@/composables/usePagination'
+import { useDebounce } from '@/composables/useDebounce'
 import { formatDate } from '@/utils/date'
 
 const loading = ref(true)
+const loadError = ref(false)
 const users = ref([])
+const total = ref(0)
+const page = ref(1)
+const pageSize = 10
 const keyword = ref('')
 const deletingId = ref(null)
 const blacklistingId = ref(null)
 const roleFilter = ref('all')
+let requestSeq = 0
 
 const tabs = [
   { key: 'all', label: '全部用户' },
@@ -23,58 +28,88 @@ const tabs = [
   { key: 'blacklist', label: '黑名单' }
 ]
 
-const stats = computed(() => {
-  const total = users.value.length
-  const bound = users.value.filter(item => item.email).length
-  return {
-    total,
-    students: users.value.filter(item => item.role === 'student').length,
-    admins: users.value.filter(item => item.role === 'admin').length,
-    blacklisted: users.value.filter(item => item.blacklisted).length,
-    health: total ? Math.round((bound / total) * 100) : 0
-  }
-})
+const stats = reactive({ total: 0, students: 0, admins: 0, blacklisted: 0, health: 0 })
 
-const filtered = computed(() => {
-  const kw = keyword.value.trim().toLowerCase()
-
-  return users.value.filter(item => {
-    const matchRole =
-      roleFilter.value === 'all' ||
-      (roleFilter.value === 'blacklist' ? item.blacklisted : item.role === roleFilter.value)
-    if (!matchRole) return false
-    if (!kw) return true
-
-    return (
-      (item.account || '').toLowerCase().includes(kw) ||
-      (item.name || '').toLowerCase().includes(kw) ||
-      (item.email || '').toLowerCase().includes(kw)
-    )
-  })
-})
-
-const { page, pageSize, paged, reset } = usePagination(filtered, 10)
+const paged = computed(() => users.value)
 
 function roleText(role) {
   return role === 'admin' ? '管理员' : '学生'
 }
 
 function switchRole(key) {
+  if (key === roleFilter.value) return
   roleFilter.value = key
-  reset()
+  page.value = 1
+  loadUsers()
+}
+
+async function loadStats() {
+  try {
+    const res = await getUserStats()
+    if (res.code !== 200) return
+    Object.assign(stats, res.data || {})
+  } catch {
+    // 统计失败不阻塞列表
+  }
 }
 
 async function loadUsers() {
+  const seq = ++requestSeq
   loading.value = true
+  loadError.value = false
   try {
-    const res = await getUserList({ page: 1, pageSize: 500 })
-    users.value = res.data?.list || []
+    const params = {
+      page: page.value,
+      pageSize,
+      keyword: keyword.value.trim() || undefined
+    }
+    if (roleFilter.value === 'student' || roleFilter.value === 'admin') params.role = roleFilter.value
+    if (roleFilter.value === 'blacklist') params.blacklisted = '1'
+
+    const res = await getUserList(params)
+    if (seq !== requestSeq) return
+    if (res.code !== 200) throw new Error(res.message || '加载失败')
+
+    const list = res.data?.list || []
+    const totalCount = Number(res.data?.total || 0)
+    const lastPage = Math.max(1, Math.ceil(totalCount / pageSize))
+
+    if (!list.length && totalCount > 0 && page.value > lastPage) {
+      page.value = lastPage
+      return loadUsers()
+    }
+
+    users.value = list
+    total.value = totalCount
   } catch {
-    ElMessage.error('用户列表加载失败')
+    if (seq !== requestSeq) return
+    loadError.value = true
     users.value = []
+    total.value = 0
   } finally {
-    loading.value = false
+    if (seq === requestSeq) loading.value = false
   }
+}
+
+async function refreshAll() {
+  await Promise.all([loadUsers(), loadStats()])
+}
+
+const debouncedSearch = useDebounce(() => {
+  page.value = 1
+  loadUsers()
+}, 300)
+
+function handleSearchNow() {
+  debouncedSearch.cancel()
+  page.value = 1
+  loadUsers()
+}
+
+function handlePageChange(value) {
+  page.value = value
+  loadUsers()
+  document.querySelector('.user-stats')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 async function handleDelete(row) {
@@ -96,16 +131,12 @@ async function handleDelete(row) {
       return
     }
     ElMessage.success('账号已注销')
-    await loadUsers()
+    await refreshAll()
   } catch (error) {
     ElMessage.error(error?.response?.data?.message || '注销失败')
   } finally {
     deletingId.value = null
   }
-}
-
-function handleSearch() {
-  reset()
 }
 
 async function handleBlacklist(row) {
@@ -151,7 +182,7 @@ async function handleBlacklist(row) {
       return
     }
     ElMessage.success(row.blacklisted ? '已解除黑名单' : '已加入黑名单')
-    await loadUsers()
+    await refreshAll()
   } catch (error) {
     ElMessage.error(error?.response?.data?.message || '操作失败')
   } finally {
@@ -159,7 +190,10 @@ async function handleBlacklist(row) {
   }
 }
 
-onMounted(loadUsers)
+onMounted(() => {
+  loadStats()
+  loadUsers()
+})
 </script>
 
 <template>
@@ -194,12 +228,14 @@ onMounted(loadUsers)
 
     <div class="card card-pad">
       <div class="toolbar">
-        <div class="tabs">
+        <div class="tabs" role="tablist" aria-label="用户角色">
           <button
             v-for="tab in tabs"
             :key="tab.key"
             type="button"
             class="tab-chip"
+            role="tab"
+            :aria-selected="roleFilter === tab.key"
             :class="{ active: roleFilter === tab.key }"
             @click="switchRole(tab.key)"
           >
@@ -224,11 +260,23 @@ onMounted(loadUsers)
           placeholder="搜索账号 / 姓名 / 邮箱"
           clearable
           :prefix-icon="Search"
-          @input="handleSearch"
+          aria-label="搜索用户"
+          @input="debouncedSearch"
+          @keyup.enter="handleSearchNow"
+          @clear="handleSearchNow"
         />
       </div>
 
       <AppSkeleton v-if="loading" type="table" :rows="7" />
+
+      <EmptyState
+        v-else-if="loadError"
+        tone="error"
+        title="用户列表加载失败"
+        description="网络或服务暂不可用，请检查后重试"
+        action-text="重新加载"
+        @action="refreshAll"
+      />
 
       <template v-else-if="paged.length">
         <el-table :data="paged">
@@ -310,19 +358,21 @@ onMounted(loadUsers)
         </el-table>
 
         <el-pagination
-          v-if="filtered.length > pageSize"
+          v-if="total > pageSize"
           v-model:current-page="page"
           background
           layout="prev, pager, next"
+          :pager-count="5"
           :page-size="pageSize"
-          :total="filtered.length"
+          :total="total"
+          @current-change="handlePageChange"
         />
       </template>
 
       <EmptyState
         v-else
-        title="没有找到用户"
-        description="换个关键词或角色筛选条件试试"
+        :title="keyword.trim() ? '没有找到用户' : '该分类下暂无用户'"
+        :description="keyword.trim() ? '换个关键词或角色筛选条件试试' : '切换上方角色标签查看其他用户'"
       />
     </div>
   </div>

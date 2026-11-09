@@ -17,7 +17,7 @@ function goHome() {
   <ErrorPage
     code="500"
     title="服务暂时不可用"
-    description="平台遇到了一点异常，可能是本地服务未启动或网络波动。请稍后重试，或确认后端服务运行在 3000 端口。"
+    description="平台遇到了一点异常，可能是本地服务未启动或网络波动。请稍后重试，或确认后端服务已启动。"
   >
     <template #actions>
       <el-button type="primary" size="large" @click="reload">重新加载</el-button>

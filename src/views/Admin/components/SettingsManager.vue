@@ -21,10 +21,19 @@ const NUMBER_KEYS = [
   'booking_advance_days'
 ]
 
+const NUMBER_RANGE = {
+  max_borrow_days: { min: 1, max: 365 },
+  max_active_bookings: { min: 1, max: 20 },
+  overdue_penalty: { min: 0, max: 100 },
+  max_renew_days: { min: 1, max: 180 },
+  booking_advance_days: { min: 1, max: 180 }
+}
+
 const loading = ref(true)
+const loadError = ref(false)
 const list = ref([])
 const drafts = reactive({})
-const savingKey = ref('')
+const savingMap = reactive({})
 
 function isBoolean(key) {
   return BOOLEAN_KEYS.includes(key)
@@ -36,17 +45,28 @@ function isNumber(key) {
 
 function normalize(row, value) {
   if (isBoolean(row.key)) return value ? '1' : '0'
-  return String(value)
+  if (isNumber(row.key)) {
+    const num = Number(value)
+    if (!Number.isFinite(num)) return String(row.value)
+    return String(num)
+  }
+  return value === undefined || value === null ? '' : String(value)
 }
 
 function changed(row) {
   return normalize(row, drafts[row.key]) !== String(row.value)
 }
 
+function isSaving(row) {
+  return Boolean(savingMap[row.key])
+}
+
 async function load() {
   loading.value = true
+  loadError.value = false
   try {
     const res = await getSettingList()
+    if (res.code !== 200) throw new Error(res.message || '加载失败')
     list.value = res.data?.list || []
     list.value.forEach(row => {
       drafts[row.key] = isBoolean(row.key)
@@ -56,7 +76,7 @@ async function load() {
           : row.value
     })
   } catch {
-    ElMessage.error('系统设置加载失败')
+    loadError.value = true
     list.value = []
   } finally {
     loading.value = false
@@ -64,8 +84,9 @@ async function load() {
 }
 
 async function saveRow(row) {
-  if (savingKey.value) return
-  savingKey.value = row.key
+  // 按行独立保存：某一项保存中不再静默吞掉其它项的保存操作
+  if (savingMap[row.key]) return
+  savingMap[row.key] = true
   try {
     const res = await updateSetting(row.key, normalize(row, drafts[row.key]))
     if (res.code !== 200) {
@@ -75,11 +96,16 @@ async function saveRow(row) {
     row.value = res.data.value
     row.updated_by = res.data.updated_by
     row.updated_at = res.data.updated_at
+    drafts[row.key] = isBoolean(row.key)
+      ? Number(res.data.value) !== 0
+      : isNumber(row.key)
+        ? Number(res.data.value)
+        : res.data.value
     ElMessage.success(`「${row.label}」已更新`)
   } catch (error) {
-    ElMessage.error(error?.response?.data?.message || '保存失败')
+    ElMessage.error(error?.response?.data?.message || '保存失败，请稍后重试')
   } finally {
-    savingKey.value = ''
+    savingMap[row.key] = false
   }
 }
 
@@ -97,6 +123,15 @@ onMounted(load)
 
     <AppSkeleton v-if="loading" type="list" :rows="5" />
 
+    <EmptyState
+      v-else-if="loadError"
+      tone="error"
+      title="系统设置加载失败"
+      description="网络或服务暂不可用，请重试"
+      action-text="重新加载"
+      @action="load"
+    />
+
     <div v-else-if="list.length" class="setting-list">
       <div v-for="row in list" :key="row.key" class="setting-item">
         <div class="setting-meta">
@@ -111,22 +146,26 @@ onMounted(load)
           <el-switch
             v-if="isBoolean(row.key)"
             v-model="drafts[row.key]"
+            :aria-label="row.label"
             active-text="启用"
             inactive-text="关闭"
           />
           <el-input-number
             v-else-if="isNumber(row.key)"
             v-model="drafts[row.key]"
+            :min="NUMBER_RANGE[row.key]?.min ?? 0"
+            :max="NUMBER_RANGE[row.key]?.max ?? 999"
             :step="1"
+            :aria-label="row.label"
             style="width: 160px"
           />
-          <el-input v-else v-model="drafts[row.key]" style="width: 220px" />
+          <el-input v-else v-model="drafts[row.key]" :aria-label="row.label" style="width: 220px" />
 
           <el-button
             type="primary"
             plain
-            :disabled="!changed(row)"
-            :loading="savingKey === row.key"
+            :disabled="!changed(row) || isSaving(row)"
+            :loading="isSaving(row)"
             @click="saveRow(row)"
           >
             保存

@@ -26,10 +26,16 @@ watch(
 )
 
 function close() {
+  if (submitting.value) return
   emit('update:modelValue', false)
 }
 
 async function confirm() {
+  if (!props.row?.id) {
+    ElMessage.warning('申请信息已失效，请刷新列表后重试')
+    return
+  }
+
   const reason = rejectReason.value === '其他原因' ? rejectOther.value.trim() : rejectReason.value
   if (!reason) {
     ElMessage.warning('请选择或填写拒绝原因')
@@ -59,10 +65,17 @@ async function confirm() {
     :model-value="modelValue"
     title="拒绝归还申请"
     width="440px"
+    :close-on-click-modal="!submitting"
+    :close-on-press-escape="!submitting"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <p class="dialog-label">请选择拒绝原因</p>
-    <el-select v-model="rejectReason" placeholder="请选择" style="width: 100%">
+    <el-select
+      v-model="rejectReason"
+      placeholder="请选择"
+      aria-label="拒绝原因"
+      style="width: 100%"
+    >
       <el-option v-for="item in reasonOptions" :key="item" :label="item" :value="item" />
     </el-select>
 
@@ -71,12 +84,15 @@ async function confirm() {
       v-model="rejectOther"
       type="textarea"
       :rows="3"
+      maxlength="120"
+      show-word-limit
+      aria-label="其他拒绝原因"
       placeholder="请填写具体原因"
       style="margin-top: 12px"
     />
 
     <template #footer>
-      <el-button @click="close">取消</el-button>
+      <el-button :disabled="submitting" @click="close">取消</el-button>
       <el-button type="danger" :loading="submitting" @click="confirm">确认拒绝</el-button>
     </template>
   </el-dialog>

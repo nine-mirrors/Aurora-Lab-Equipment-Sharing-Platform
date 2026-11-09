@@ -14,6 +14,7 @@ import AppSkeleton from '@/components/common/AppSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 
 const loading = ref(true)
+const loadError = ref(false)
 const list = ref([])
 const departments = ref([])
 const dialogVisible = ref(false)
@@ -40,12 +41,18 @@ const statusMap = {
 
 async function load() {
   loading.value = true
+  loadError.value = false
   try {
-    const [labRes, deptRes] = await Promise.all([getLabList(), getDepartmentList()])
-    list.value = labRes.data?.list || []
-    departments.value = deptRes.data?.list || []
+    // 两个接口相互独立：院系失败不应导致实验室列表被清空
+    const [labRes, deptRes] = await Promise.allSettled([getLabList(), getDepartmentList()])
+    if (labRes.status === 'fulfilled' && labRes.value.code === 200) {
+      list.value = labRes.value.data?.list || []
+    } else {
+      throw new Error('实验室加载失败')
+    }
+    departments.value = deptRes.status === 'fulfilled' ? deptRes.value.data?.list || [] : []
   } catch {
-    ElMessage.error('实验室列表加载失败')
+    loadError.value = true
     list.value = []
   } finally {
     loading.value = false
@@ -168,6 +175,15 @@ onMounted(load)
     </div>
 
     <AppSkeleton v-if="loading" type="table" :rows="5" />
+
+    <EmptyState
+      v-else-if="loadError"
+      tone="error"
+      title="实验室列表加载失败"
+      description="网络或服务暂不可用，请重试"
+      action-text="重新加载"
+      @action="load"
+    />
 
     <el-table v-else-if="list.length" :data="list">
       <el-table-column prop="name" label="实验室" min-width="170" />

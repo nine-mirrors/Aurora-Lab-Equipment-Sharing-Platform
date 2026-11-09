@@ -13,6 +13,7 @@ import AppSkeleton from '@/components/common/AppSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 
 const loading = ref(true)
+const loadError = ref(false)
 const list = ref([])
 const dialogVisible = ref(false)
 const saving = ref(false)
@@ -38,11 +39,13 @@ function formatTime(input) {
 
 async function load() {
   loading.value = true
+  loadError.value = false
   try {
     const res = await getAnnouncementList()
+    if (res.code !== 200) throw new Error(res.message || '加载失败')
     list.value = res.data?.list || []
   } catch {
-    ElMessage.error('公告加载失败')
+    loadError.value = true
     list.value = []
   } finally {
     loading.value = false
@@ -157,6 +160,15 @@ onMounted(load)
     </div>
 
     <AppSkeleton v-if="loading" type="table" :rows="5" />
+
+    <EmptyState
+      v-else-if="loadError"
+      tone="error"
+      title="公告加载失败"
+      description="网络或服务暂不可用，请重试"
+      action-text="重新加载"
+      @action="load"
+    />
 
     <el-table v-else-if="list.length" :data="list">
       <el-table-column prop="title" label="标题" min-width="180" />

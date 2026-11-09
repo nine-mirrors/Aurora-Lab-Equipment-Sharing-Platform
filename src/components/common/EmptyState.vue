@@ -3,15 +3,19 @@ defineProps({
   title: { type: String, default: '暂无数据' },
   description: { type: String, default: '' },
   actionText: { type: String, default: '' },
-  compact: { type: Boolean, default: false }
+  compact: { type: Boolean, default: false },
+  tone: { type: String, default: 'default' }
 })
 
 defineEmits(['action'])
 </script>
 
 <template>
-  <div class="empty-state" :class="{ compact }">
-    <div class="empty-visual">
+  <div class="empty-state" :class="{ compact, 'is-error': tone === 'error' }">
+    <div v-if="tone === 'error'" class="error-glyph" aria-hidden="true">
+      <el-icon><WarningFilled /></el-icon>
+    </div>
+    <div v-else class="empty-visual">
       <span class="orbit"></span>
       <span class="orbit orbit-2"></span>
       <svg viewBox="0 0 120 100" fill="none" class="empty-svg">
@@ -53,6 +57,23 @@ defineEmits(['action'])
 
 .empty-state.compact {
   padding: 26px 16px;
+}
+
+.error-glyph {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 14px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  color: var(--red);
+  background: var(--red-soft);
+  border: 1px solid color-mix(in srgb, var(--red) 24%, transparent);
+}
+
+.empty-state.is-error strong {
+  color: var(--text-1);
 }
 
 .empty-visual {

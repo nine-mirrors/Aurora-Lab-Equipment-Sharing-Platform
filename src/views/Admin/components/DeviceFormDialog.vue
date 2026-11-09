@@ -15,6 +15,7 @@ const emit = defineEmits(['update:modelValue', 'saved'])
 
 const saving = ref(false)
 const imageUploading = ref(false)
+const uploadPercent = ref(0)
 const editingId = computed(() => props.device?.id || null)
 
 const form = reactive({
@@ -50,9 +51,22 @@ function close() {
 
 async function handleImageUpload(options) {
   if (imageUploading.value) return
+  const file = options.file
+  if (!file.type?.startsWith('image/')) {
+    ElMessage.warning('请选择 JPG / PNG / WebP 图片')
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.warning('图片不能超过 5MB，请压缩后再上传')
+    return
+  }
+
   imageUploading.value = true
+  uploadPercent.value = 0
   try {
-    const res = await uploadImage(options.file)
+    const res = await uploadImage(file, percent => {
+      uploadPercent.value = percent
+    })
     if (res.code !== 200) {
       ElMessage.error(res.message || '图片上传失败')
       return
@@ -61,13 +75,16 @@ async function handleImageUpload(options) {
     ElMessage.success(res.data.storage === 'oss' ? '图片已上传到 OSS' : '图片已保存到本地')
     options.onSuccess?.(res)
   } catch (error) {
-    ElMessage.error(error?.response?.data?.message || '图片上传失败')
+    ElMessage.error(error?.response?.data?.message || '图片上传失败，请重试')
+    options.onError?.(error)
   } finally {
     imageUploading.value = false
+    uploadPercent.value = 0
   }
 }
 
 async function handleSave() {
+  if (saving.value || imageUploading.value) return
   if (!form.name.trim()) {
     ElMessage.warning('请填写设备名称')
     return
@@ -159,7 +176,14 @@ async function handleSave() {
             <el-button v-if="form.image" text type="danger" @click="form.image = ''">
               移除
             </el-button>
-            <small>支持 JPG / PNG / WebP，最大 5MB，自动上传至 OSS</small>
+            <el-progress
+              v-if="imageUploading"
+              class="upload-progress"
+              :percentage="uploadPercent"
+              :stroke-width="4"
+              :show-text="false"
+            />
+            <small>{{ imageUploading ? `上传中 ${uploadPercent}%` : '支持 JPG / PNG / WebP，最大 5MB，自动上传至 OSS' }}</small>
           </div>
         </div>
       </el-form-item>
@@ -181,8 +205,15 @@ async function handleSave() {
     </el-form>
 
     <template #footer>
-      <el-button @click="close">取消</el-button>
-      <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
+      <el-button :disabled="saving" @click="close">取消</el-button>
+      <el-button
+        type="primary"
+        :loading="saving"
+        :disabled="imageUploading"
+        @click="handleSave"
+      >
+        {{ imageUploading ? '图片上传中…' : '保存' }}
+      </el-button>
     </template>
   </el-dialog>
 </template>
@@ -236,6 +267,11 @@ async function handleSave() {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+}
+
+.upload-progress {
+  flex-basis: 100%;
+  width: 100%;
 }
 
 .image-actions small {

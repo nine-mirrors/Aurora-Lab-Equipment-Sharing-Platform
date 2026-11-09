@@ -13,10 +13,12 @@ import DeviceFormDialog from './components/DeviceFormDialog.vue'
 import { useDebounce } from '@/composables/useDebounce'
 
 const loading = ref(true)
+const loadError = ref(false)
 const devices = ref([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = 10
+let requestSeq = 0
 
 const keyword = ref('')
 const category = ref('')
@@ -76,7 +78,10 @@ async function loadStats() {
 }
 
 async function loadDevices() {
+  // 请求序号：防抖、下拉筛选、回车可能并发，只让最后一次请求落地
+  const seq = ++requestSeq
   loading.value = true
+  loadError.value = false
   try {
     const res = await getDeviceList({
       name: keyword.value.trim() || undefined,
@@ -85,26 +90,44 @@ async function loadDevices() {
       page: page.value,
       pageSize
     })
+    if (seq !== requestSeq) return
+    if (res.code !== 200) throw new Error(res.message || '加载失败')
 
-    devices.value = res.data?.list || []
-    total.value = res.data?.total || 0
+    const list = res.data?.list || []
+    const totalCount = res.data?.total || 0
+    const lastPage = Math.max(1, Math.ceil(totalCount / pageSize))
+
+    // 删除/下架后当前页可能已越界：回到最后一页重新取数
+    if (!list.length && totalCount > 0 && page.value > lastPage) {
+      page.value = lastPage
+      return loadDevices()
+    }
+
+    devices.value = list
+    total.value = totalCount
   } catch {
-    ElMessage.error('设备列表加载失败')
+    if (seq !== requestSeq) return
+    loadError.value = true
     devices.value = []
     total.value = 0
   } finally {
-    loading.value = false
+    if (seq === requestSeq) loading.value = false
   }
 }
 
 function handleSearch() {
+  debouncedSearch.cancel()
   page.value = 1
   loadDevices()
 }
 
-const debouncedSearch = useDebounce(handleSearch, 300)
+const debouncedSearch = useDebounce(() => {
+  page.value = 1
+  loadDevices()
+}, 300)
 
 function handleReset() {
+  debouncedSearch.cancel()
   keyword.value = ''
   category.value = ''
   status.value = ''
@@ -166,12 +189,18 @@ async function handleBatchOff() {
   }
 
   try {
-    await Promise.all(list.map(item => offDevice(item.id)))
-    ElMessage.success(`已下架 ${list.length} 台设备`)
+    const results = await Promise.allSettled(list.map(item => offDevice(item.id)))
+    const failed = results.filter(item => item.status === 'rejected').length
     selection.value = []
     await Promise.all([loadDevices(), loadStats()])
+    if (failed) {
+      ElMessage.warning(`已下架 ${list.length - failed} 台，${failed} 台失败，请重试`)
+    } else {
+      ElMessage.success(`已下架 ${list.length} 台设备`)
+    }
   } catch {
-    ElMessage.error('部分设备下架失败，请刷新后重试')
+    await Promise.all([loadDevices(), loadStats()])
+    ElMessage.error('批量下架失败，请刷新后重试')
   }
 }
 
@@ -229,9 +258,12 @@ function handleSelectionChange(rows) {
   selection.value = rows
 }
 
+const listCard = ref(null)
+
 function handlePageChange(value) {
   page.value = value
   loadDevices()
+  listCard.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 async function toggleMaintenance(row) {
@@ -338,7 +370,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div class="card card-pad">
+    <div ref="listCard" class="card card-pad">
       <div class="toolbar">
         <div class="card-head">
           <h3>设备清单<span class="sub">共 {{ total }} 条</span></h3>
@@ -355,6 +387,15 @@ onMounted(async () => {
       </div>
 
       <AppSkeleton v-if="loading" type="table" :rows="7" />
+
+      <EmptyState
+        v-else-if="loadError"
+        tone="error"
+        title="设备列表加载失败"
+        description="网络或服务暂不可用，请检查后重试"
+        action-text="重新加载"
+        @action="loadDevices"
+      />
 
       <template v-else-if="devices.length">
         <el-table :data="devices" @selection-change="handleSelectionChange">
@@ -408,7 +449,7 @@ onMounted(async () => {
             <template #default="{ row }">
               <el-button size="small" type="primary" plain @click="openEdit(row)">编辑</el-button>
               <el-button
-                v-if="Number(row.is_active)"
+                v-if="Number(row.is_active) || row.maintenance_status === 'repairing'"
                 size="small"
                 :type="row.maintenance_status === 'repairing' ? 'success' : 'warning'"
                 plain
@@ -435,6 +476,7 @@ onMounted(async () => {
           v-model:current-page="page"
           background
           layout="prev, pager, next"
+          :pager-count="5"
           :page-size="pageSize"
           :total="total"
           @current-change="handlePageChange"

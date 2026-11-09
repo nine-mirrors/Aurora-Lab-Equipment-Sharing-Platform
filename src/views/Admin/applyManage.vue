@@ -1,6 +1,6 @@
 <!-- 管理端申请管理：批量审批、导出与归还确认 -->
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, MagicStick, Search } from '@element-plus/icons-vue'
 import { getReviewSuggestion } from '@/api/ai'
@@ -13,23 +13,39 @@ import ApplyReviewDrawer from './components/ApplyReviewDrawer.vue'
 import RejectBookingDialog from './components/RejectBookingDialog.vue'
 import RejectReturnDialog from './components/RejectReturnDialog.vue'
 import { downloadCsv } from '@/utils/csv'
+import { useDebounce } from '@/composables/useDebounce'
 
 const loading = ref(true)
+const loadError = ref(false)
 const activeTab = ref('pending')
 const keyword = ref('')
 const page = ref(1)
 const pageSize = 10
+let requestSeq = 0
 
-const lists = ref({
-  pending: [],
-  'extension-pending': [],
-  unreturned: [],
-  returning: [],
-  returned: [],
-  rejected: [],
-  cancelled: [],
-  'return-rejected': []
+const rows = ref([])
+const total = ref(0)
+const counts = reactive({
+  pending: 0,
+  'extension-pending': 0,
+  unreturned: 0,
+  returning: 0,
+  returned: 0,
+  rejected: 0,
+  cancelled: 0,
+  'return-rejected': 0
 })
+
+const FETCHERS = {
+  pending: getPendingBookings,
+  'extension-pending': getExtensionPendingBookings,
+  unreturned: getUnreturnedBookings,
+  returning: getReturningBookings,
+  returned: getReturnedBookings,
+  rejected: getRejectedBookings,
+  cancelled: getCancelledBookings,
+  'return-rejected': getReturnRejectedBookings
+}
 
 const tabs = [
   { key: 'pending', label: '待审核' },
@@ -70,34 +86,32 @@ const rejectRow = ref(null)
 const returnRejectVisible = ref(false)
 const returnRejectRow = ref(null)
 
-const currentList = computed(() => lists.value[activeTab.value] || [])
-
-const filtered = computed(() => {
-  const kw = keyword.value.trim()
-  if (!kw) return currentList.value
-
-  return currentList.value.filter(
-    item =>
-      (item.device_name || '').includes(kw) ||
-      (item.user_name || '').includes(kw) ||
-      (item.category || '').includes(kw)
-  )
-})
-
-const paged = computed(() => {
-  const start = (page.value - 1) * pageSize
-  return filtered.value.slice(start, start + pageSize)
-})
+const paged = computed(() => rows.value)
 
 function tabCount(key) {
-  return (lists.value[key] || []).length
+  return counts[key] || 0
+}
+
+function todayKey() {
+  const now = new Date()
+  const pad = num => String(num).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
+function rowStatus(row) {
+  if (!row) return activeTab.value
+  if (row.status === 'approved' && row.extension_status === 'pending') return 'extension-pending'
+  if (row.status === 'approved' && row.borrow_end < todayKey()) return 'overdue'
+  return row.status || activeTab.value
 }
 
 function switchTab(key) {
+  if (key === activeTab.value) return
   activeTab.value = key
   page.value = 1
   keyword.value = ''
   selection.value = []
+  loadList()
 }
 
 function openDetail(row) {
@@ -133,44 +147,59 @@ function openReview(row) {
   generateReview(row)
 }
 
+/** 各状态计数：只取 total，避免把每个状态的全量数据都拉到前端 */
+async function loadCounts() {
+  const entries = Object.entries(FETCHERS)
+  const results = await Promise.allSettled(
+    entries.map(([, fetcher]) => fetcher({ page: 1, pageSize: 1 }))
+  )
+  results.forEach((item, index) => {
+    const key = entries[index][0]
+    if (item.status === 'fulfilled' && item.value.code === 200) {
+      counts[key] = Number(item.value.data?.total || 0)
+    }
+  })
+}
+
+/** 当前状态列表：服务端分页 + 服务端关键词搜索 */
+async function loadList() {
+  const seq = ++requestSeq
+  loading.value = true
+  loadError.value = false
+  try {
+    const fetcher = FETCHERS[activeTab.value]
+    const res = await fetcher({
+      page: page.value,
+      pageSize,
+      keyword: keyword.value.trim() || undefined
+    })
+    if (seq !== requestSeq) return
+    if (res.code !== 200) throw new Error(res.message || '加载失败')
+
+    const list = res.data?.list || []
+    const totalCount = Number(res.data?.total || 0)
+    const lastPage = Math.max(1, Math.ceil(totalCount / pageSize))
+
+    if (!list.length && totalCount > 0 && page.value > lastPage) {
+      page.value = lastPage
+      return loadList()
+    }
+
+    rows.value = list
+    total.value = totalCount
+  } catch {
+    if (seq !== requestSeq) return
+    loadError.value = true
+    rows.value = []
+    total.value = 0
+  } finally {
+    if (seq === requestSeq) loading.value = false
+  }
+}
+
 async function loadAll() {
   loading.value = true
-  try {
-    const [
-      pending,
-      extensionPending,
-      unreturned,
-      returning,
-      returned,
-      rejected,
-      cancelled,
-      returnRejected
-    ] = await Promise.all([
-      getPendingBookings({ page: 1, pageSize: 500 }),
-      getExtensionPendingBookings({ page: 1, pageSize: 500 }),
-      getUnreturnedBookings({ page: 1, pageSize: 500 }),
-      getReturningBookings({ page: 1, pageSize: 500 }),
-      getReturnedBookings({ page: 1, pageSize: 500 }),
-      getRejectedBookings({ page: 1, pageSize: 500 }),
-      getCancelledBookings({ page: 1, pageSize: 500 }),
-      getReturnRejectedBookings({ page: 1, pageSize: 500 })
-    ])
-
-    lists.value = {
-      pending: pending.data?.list || [],
-      'extension-pending': extensionPending.data?.list || [],
-      unreturned: unreturned.data?.list || [],
-      returning: returning.data?.list || [],
-      returned: returned.data?.list || [],
-      rejected: rejected.data?.list || [],
-      cancelled: cancelled.data?.list || [],
-      'return-rejected': returnRejected.data?.list || []
-    }
-  } catch {
-    ElMessage.error('申请列表加载失败')
-  } finally {
-    loading.value = false
-  }
+  await Promise.all([loadCounts(), loadList()])
 }
 
 async function approve(row) {
@@ -215,17 +244,29 @@ async function batchApprove() {
   }
 
   batchLoading.value = true
-  let success = 0
+  const pending = [...selection.value]
   try {
-    for (const row of selection.value) {
-      const res = await auditBooking(row.id, { action: 'approve' })
-      if (res.code === 200) success += 1
+    // 逐条串行审批，单条失败不影响后续；结束统一刷新，避免重复提交同一批
+    const results = []
+    for (const row of pending) {
+      try {
+        const res = await auditBooking(row.id, { action: 'approve' })
+        results.push(res.code === 200 ? null : res.message || `#${row.id} 审批失败`)
+      } catch (error) {
+        results.push(error?.response?.data?.message || `#${row.id} 审批失败`)
+      }
     }
-    ElMessage.success(`已通过 ${success} 条申请`)
+
+    const failed = results.filter(Boolean)
+    const success = pending.length - failed.length
     selection.value = []
     await loadAll()
-  } catch {
-    ElMessage.error('部分申请审批失败，请刷新后重试')
+
+    if (failed.length) {
+      ElMessage.warning(`已通过 ${success} 条，${failed.length} 条失败：${failed[0]}`)
+    } else {
+      ElMessage.success(`已通过 ${success} 条申请`)
+    }
   } finally {
     batchLoading.value = false
   }
@@ -358,15 +399,27 @@ function handleCellClick(row, column) {
 }
 
 async function handleExport() {
-  if (!filtered.value.length) {
+  if (!total.value) {
     ElMessage.warning('当前分类下没有可导出的数据')
     return
   }
 
   exporting.value = true
   try {
+    // 导出当前分类 + 当前关键词的全量数据，而不是仅导出当前页
+    const res = await FETCHERS[activeTab.value]({
+      page: 1,
+      pageSize: 2000,
+      keyword: keyword.value.trim() || undefined
+    })
+    if (res.code !== 200) {
+      ElMessage.error(res.message || '导出失败')
+      return
+    }
+
+    const list = res.data?.list || []
     const header = ['申请编号', '设备', '分类', '申请人', '借用开始', '借用结束', '申请时间', '状态', '取件码', '归还码', '用途']
-    const rows = filtered.value.map(item => [
+    const exportRows = list.map(item => [
       item.id,
       item.device_name,
       item.category,
@@ -374,7 +427,7 @@ async function handleExport() {
       item.borrow_start,
       item.borrow_end,
       item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '',
-      statusMap[activeTab.value]?.text || activeTab.value,
+      statusMap[rowStatus(item)]?.text || rowStatus(item),
       item.pickup_code || '',
       item.return_code || '',
       item.purpose || ''
@@ -383,16 +436,33 @@ async function handleExport() {
     downloadCsv(
       `申请记录_${activeTab.value}_${new Date().toISOString().slice(0, 10)}.csv`,
       header,
-      rows
+      exportRows
     )
-    ElMessage.success(`已导出 ${rows.length} 条记录`)
+    ElMessage.success(`已导出 ${exportRows.length} 条记录`)
+  } catch {
+    ElMessage.error('导出失败，请稍后重试')
   } finally {
     exporting.value = false
   }
 }
 
-function handleSearch() {
+const debouncedSearch = useDebounce(() => {
   page.value = 1
+  loadList()
+}, 300)
+
+function handleSearchNow() {
+  debouncedSearch.cancel()
+  page.value = 1
+  loadList()
+}
+
+const listCard = ref(null)
+
+function handlePageChange(value) {
+  page.value = value
+  loadList()
+  listCard.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 onMounted(loadAll)
@@ -400,16 +470,18 @@ onMounted(loadAll)
 
 <template>
   <div class="page-shell">
-    <ApplyStatsGrid :lists="lists" :active-tab="activeTab" @select="switchTab" />
+    <ApplyStatsGrid :counts="counts" :active-tab="activeTab" @select="switchTab" />
 
-    <div class="card card-pad">
+    <div ref="listCard" class="card card-pad">
       <div class="toolbar">
-        <div class="tabs">
+        <div class="tabs" role="tablist" aria-label="申请状态">
           <button
             v-for="tab in tabs"
             :key="tab.key"
             type="button"
             class="tab-chip"
+            role="tab"
+            :aria-selected="activeTab === tab.key"
             :class="{ active: activeTab === tab.key }"
             @click="switchTab(tab.key)"
           >
@@ -425,7 +497,10 @@ onMounted(loadAll)
             placeholder="搜索设备 / 申请人 / 分类"
             clearable
             :prefix-icon="Search"
-            @input="handleSearch"
+            aria-label="搜索申请"
+            @input="debouncedSearch"
+            @keyup.enter="handleSearchNow"
+            @clear="handleSearchNow"
           />
           <el-button :loading="exporting" @click="handleExport">
             <el-icon><Download /></el-icon>
@@ -442,6 +517,15 @@ onMounted(loadAll)
       </div>
 
       <AppSkeleton v-if="loading" type="table" :rows="7" />
+
+      <EmptyState
+        v-else-if="loadError"
+        tone="error"
+        title="申请列表加载失败"
+        description="网络或服务暂不可用，请检查后重试"
+        action-text="重新加载"
+        @action="loadAll"
+      />
 
       <template v-else-if="paged.length">
         <el-table :data="paged" @cell-click="handleCellClick" @selection-change="handleSelectionChange">
@@ -481,13 +565,13 @@ onMounted(loadAll)
 
           <el-table-column label="申请时间" width="115">
             <template #default="{ row }">
-              <span class="muted">{{ new Date(row.created_at).toLocaleDateString('zh-CN') }}</span>
+              <span class="muted">{{ row.created_at ? new Date(row.created_at).toLocaleDateString('zh-CN') : '—' }}</span>
             </template>
           </el-table-column>
 
           <el-table-column label="状态" width="110">
-            <template #default>
-              <StatusPill :status="activeTab" size="sm" />
+            <template #default="{ row }">
+              <StatusPill :status="rowStatus(row)" size="sm" />
             </template>
           </el-table-column>
 
@@ -548,25 +632,29 @@ onMounted(loadAll)
                 <el-button size="small" plain @click.stop="openDetail(row)">查看原因</el-button>
               </template>
 
-              <span v-else class="muted">已处理</span>
+              <el-button v-else size="small" plain @click.stop="openDetail(row)">查看详情</el-button>
             </template>
           </el-table-column>
         </el-table>
 
         <el-pagination
-          v-if="filtered.length > pageSize"
+          v-if="total > pageSize"
           v-model:current-page="page"
           background
           layout="prev, pager, next"
+          :pager-count="5"
           :page-size="pageSize"
-          :total="filtered.length"
+          :total="total"
+          @current-change="handlePageChange"
         />
       </template>
 
       <EmptyState
         v-else
-        title="当前分类暂无申请"
-        description="切换上方标签查看其他状态，或等待学生提交新的借用申请"
+        :title="keyword.trim() ? '没有匹配的申请' : '当前分类暂无申请'"
+        :description="keyword.trim() ? '换个关键词，或清空搜索查看全部记录' : '切换上方标签查看其他状态，或等待学生提交新的借用申请'"
+        :action-text="keyword.trim() ? '清空搜索' : ''"
+        @action="keyword = ''; handleSearchNow()"
       />
     </div>
 

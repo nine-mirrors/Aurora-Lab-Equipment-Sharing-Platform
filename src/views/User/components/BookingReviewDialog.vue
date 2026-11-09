@@ -11,7 +11,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'success'])
 
-const reviewRating = ref(5)
+const reviewRating = ref(0)
 const reviewComment = ref('')
 const reviewing = ref(false)
 
@@ -19,7 +19,7 @@ watch(
   () => props.modelValue,
   visible => {
     if (!visible) return
-    reviewRating.value = 5
+    reviewRating.value = 0
     reviewComment.value = ''
   }
 )
@@ -29,6 +29,7 @@ function close() {
 }
 
 async function submit() {
+  if (reviewing.value) return
   if (!reviewRating.value) {
     ElMessage.warning('请选择评分')
     return
@@ -72,7 +73,12 @@ async function submit() {
 
     <div class="rate-row">
       <span>使用评分</span>
-      <el-rate v-model="reviewRating" show-text :texts="['很差', '一般', '还行', '满意', '超赞']" />
+      <el-rate
+        v-model="reviewRating"
+        show-text
+        aria-label="本次借用体验评分"
+        :texts="['很差', '一般', '还行', '满意', '超赞']"
+      />
     </div>
 
     <el-input
